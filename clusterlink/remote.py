@@ -35,6 +35,30 @@ def root_path(value):
     return root
 
 
+def checksum(path):
+    h = hashlib.sha256()
+    with path.open('rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def pin(root, digest, lease):
+    if lease:
+        if not re.fullmatch(r'[0-9a-f]{64}', lease):
+            raise ValueError('Invalid cache lease')
+        directory = root / 'leases' / digest
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / lease).touch()
+    else:
+        (root / 'pins' / (digest + '.tar')).touch()
+
+
+def pinned(root, artifact):
+    leases = root / 'leases' / artifact.name[:-7]
+    return (root / 'pins' / artifact.stem).exists() or (leases.exists() and any(leases.iterdir()))
+
+
 def install(root, settings, scripts):
     p = probe()
     if not p["commands"]["blahpd"] or not p["commands"]["condor_ft-gahp"]:
@@ -94,23 +118,49 @@ def main():
         if not re.fullmatch(r"[0-9a-f]{64}", digest):
             raise ValueError("Invalid content digest")
         target = root / "cache" / (digest + ".tar.gz")
+        if action == 'release':
+            lease = sys.argv[4]
+            if not re.fullmatch(r'[0-9a-f]{64}', lease):
+                raise ValueError('Invalid cache lease')
+            (root / 'leases' / digest / lease).unlink(missing_ok=True)
+            print(json.dumps({'released': True}))
+            return
         if action == "check":
             exists = target.exists()
             if exists:
+                if checksum(target) != digest:
+                    raise RuntimeError('Cached artifact checksum mismatch')
+                pin(root, digest, sys.argv[4] if len(sys.argv) > 4 else None)
                 os.utime(target, None)
             print(json.dumps({"cached": exists, "path": str(target)}))
             return
         if action != "upload":
             raise ValueError("Unknown operation")
         expected = int(sys.argv[4])
+        lease = sys.argv[5] if len(sys.argv) > 5 else None
         if expected <= 0 or expected > settings["cache_bytes"]:
             raise ValueError("Artifact exceeds cache budget")
-        # Never evict pinned entries; currently artifacts remain pinned until
-        # an explicit future release operation, favoring safety over utilization.
+        if target.exists():
+            # A concurrent uploader may have completed after our cache check.
+            # Consume/verify this stream, but do not reserve space or replace it.
+            h = hashlib.sha256()
+            remaining = expected
+            while remaining:
+                chunk = sys.stdin.buffer.read(min(1024 * 1024, remaining))
+                if not chunk:
+                    raise RuntimeError('Incomplete upload')
+                remaining -= len(chunk)
+                h.update(chunk)
+            if h.hexdigest() != digest or checksum(target) != digest:
+                raise RuntimeError('Checksum mismatch')
+            pin(root, digest, lease)
+            print(json.dumps({'cached': True, 'uploaded_bytes': 0, 'path': str(target)}))
+            return
+        # LRU eviction considers only entries without outstanding job leases.
         for f in sorted((root / "cache").glob("*.tar.gz"), key=lambda f: f.stat().st_mtime):
             if size(root / "cache") + expected <= settings["cache_bytes"]:
                 break
-            if not (root / "pins" / f.stem).exists():
+            if not pinned(root, f):
                 f.unlink()
         if size(root / "cache") + expected > settings["cache_bytes"]:
             raise RuntimeError("Cache full; active/pinned artifacts cannot be evicted")
@@ -135,7 +185,7 @@ def main():
             if h.hexdigest() != digest:
                 raise RuntimeError("Checksum mismatch")
             temp.replace(target)
-            (root / "pins" / target.stem).touch()
+            pin(root, digest, lease)
         finally:
             temp.unlink(missing_ok=True)
         print(json.dumps({"cached": False, "uploaded_bytes": received, "path": str(target)}))

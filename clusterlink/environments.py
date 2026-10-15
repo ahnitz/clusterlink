@@ -88,7 +88,13 @@ def executable_command(value, prefix=None):
     return './' + shlex.quote(path.name), path
 
 
-def launcher(command, archive='environment.tar.gz'):
+def launcher(command, archive='environment.tar.gz', source_prefix=None):
+    remap = ''
+    if source_prefix:
+        remap = ('source_prefix=' + shlex.quote(str(source_prefix).rstrip('/') + '/') + '\n'
+                 'mapped=()\nfor arg in "$@"; do\n'
+                 '  mapped+=("${arg//"$source_prefix"/"$CLUSTERLINK_ENV/"}")\ndone\n'
+                 'set -- "${mapped[@]}"\n')
     return '''#!/bin/bash
 set -euo pipefail
 mkdir .clusterlink-env
@@ -99,4 +105,4 @@ export PYTHONNOUSERSITE=1
 "$CLUSTERLINK_ENV/bin/python" "$CLUSTERLINK_ENV/bin/conda-unpack"
 export PATH="$CLUSTERLINK_ENV/bin:$PATH"
 export CONDA_PREFIX="$CLUSTERLINK_ENV"
-exec '''.replace('ARCHIVE_PLACEHOLDER', shlex.quote(archive)) + command + ' "$@"\n'
+'''.replace('ARCHIVE_PLACEHOLDER', shlex.quote(archive)) + remap + 'exec ' + command + ' "$@"\n'

@@ -7,7 +7,7 @@ name = "personal-clusterlink"
 version = "0.1.0"
 description = "User-owned HTCondor SSH cluster enrollment prototype"
 requires-python = ">=3.11"
-dependencies = ["conda-pack>=0.8"]
+dependencies = ["conda-pack>=0.8", "htcondor>=25,<26"]
 
 [project.scripts]
 clusterlink = "clusterlink.cli:main"

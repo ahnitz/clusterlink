@@ -30,6 +30,12 @@ def configure(state, local_slots=0):
                     "\nexport PYTHONPATH=" + shlex.quote(package_root) +
                     "\nexec " + shlex.quote(sys.executable) + " -m clusterlink.gahp \"$@\"\n")
     shim.chmod(0o700)
+    hook = state / 'prepare-job'
+    hook.write_text(shim.read_text().replace('clusterlink.gahp', 'clusterlink.hooks'))
+    hook.chmod(0o700)
+    cleanup = state / 'cleanup-job'
+    cleanup.write_text(hook.read_text().replace('clusterlink.hooks', 'clusterlink.hooks cleanup'))
+    cleanup.chmod(0o700)
     username = __import__("getpass").getuser()
     text = f"""include : /etc/condor/condor_config
 LOCAL_CONFIG_FILE =
@@ -81,6 +87,14 @@ WANT_SUSPEND = False
 WANT_VACATE = False
 MAX_DEFAULT_LOG = 10000000
 """
+    selected = state / 'environment.json'
+    if selected.exists():
+        prefix = json.loads(selected.read_text())['prefix']
+        text += '\nSUBMIT_ATTRS = ClusterlinkEnvironment, ClusterlinkEligible\n'
+        text += 'ClusterlinkEnvironment = ' + json.dumps(prefix) + '\n'
+        text += 'ClusterlinkEligible = True\nJOB_ROUTER_HOOK_KEYWORD = CLUSTERLINK\n'
+        text += 'CLUSTERLINK_HOOK_TRANSLATE_JOB = ' + str(hook) + '\n'
+        text += 'CLUSTERLINK_HOOK_JOB_CLEANUP = ' + str(cleanup) + '\n'
     for name, site in sites.items():
         text += f"""
 JOB_ROUTER_ROUTE_{name} @=route

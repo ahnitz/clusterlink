@@ -34,7 +34,7 @@ class HookTests(unittest.TestCase):
             self.assertIn('bin/search', Path(out['Cmd']).read_text())
 
     def test_prepared_convenience_submission_is_unchanged(self):
-        ad = classad2.ClassAd({'ClusterlinkRun': 'already-prepared', 'Cmd': 'launch.sh'})
+        ad = classad2.ClassAd({'ClusterlinkPrepared': True, 'Cmd': 'launch.sh'})
         self.assertIs(prepare(ad, {}, Path('/unused')), ad)
 
 

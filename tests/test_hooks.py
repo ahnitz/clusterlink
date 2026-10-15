@@ -4,7 +4,7 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 import classad2
-from clusterlink.hooks import prepare
+from clusterlink.hooks import prepare, serialize
 
 
 class HookTests(unittest.TestCase):
@@ -32,6 +32,15 @@ class HookTests(unittest.TestCase):
             self.assertEqual(out['ClusterlinkCachedEnv'], hashlib.sha256(b'test archive').hexdigest())
             self.assertEqual(remote.call_count, 1)
             self.assertIn('bin/search', Path(out['Cmd']).read_text())
+
+    def test_multiline_values_survive_line_oriented_hook_reader(self):
+        original = classad2.ClassAd({'ClusterlinkRemoteSubmitArgs':
+            'request_disk = 1024 KB\nrequirements = (OpSys == "LINUX")\n'})
+        wire = serialize(original)
+        self.assertEqual(len(wire.splitlines()), 1)
+        decoded = classad2.parseOne("[" + wire + "]", parser=classad2.Parser.New)
+        self.assertEqual(decoded['ClusterlinkRemoteSubmitArgs'],
+                         original['ClusterlinkRemoteSubmitArgs'])
 
     def test_prepared_convenience_submission_is_unchanged(self):
         ad = classad2.ClassAd({'ClusterlinkPrepared': True, 'Cmd': 'launch.sh'})

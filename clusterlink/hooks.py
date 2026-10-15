@@ -44,7 +44,7 @@ def prepare(ad, site, state):
         result = remote_call(site, 'check', digest, ident)
         if not result['cached']:
             remote_call(site, 'upload', digest, artifact.stat().st_size, ident,
-                        payload=artifact.read_bytes())
+                        payload=artifact)
         ad['ClusterlinkCachedEnv'] = digest
         ad['ClusterlinkLease'] = ident
     else:
@@ -59,7 +59,19 @@ def prepare(ad, site, state):
     ad['ShouldTransferFiles'] = 'YES'
     ad['ClusterlinkPrepared'] = True
     ad['NodeNumber'] = int(ad.get('RequestCpus', 1))
+    if isinstance(ad.get('RequestGPUs'), (int, float)):
+        ad['GPUNumber'] = int(ad['RequestGPUs'])
+    if site['scheduler'] == 'condor':
+        extra = 'request_disk = ' + str(int(ad.get('RequestDisk', 2097152))) + ' KB\n'
+        if 'Requirements' in ad:
+            extra += 'requirements = ' + str(ad.lookup('Requirements')) + '\n'
+        ad['ClusterlinkRemoteSubmitArgs'] = extra
     return ad
+
+
+def serialize(ad):
+    """Serialize hook updates as one assignment per physical line."""
+    return "\n".join(f"{key} = {ad.lookup(key)}" for key in ad) + "\n"
 
 
 def main():
@@ -80,7 +92,10 @@ def main():
         # GridResource is supplied by the native router, not selected here.
         site_name = route['GridResource'].split()[2]
         ad = prepare(ad, sites[site_name], state)
-        print(ad.printOld(), end='')
+        # The native hook reader inserts one ClassAd assignment per line.
+        # printOld() emits literal newlines inside string values; ExprTree's
+        # string representation escapes them for this line-oriented protocol.
+        sys.stdout.write(serialize(ad))
     except Exception as error:
         print('clusterlink preparation failed: ' + str(error), file=sys.stderr)
         sys.exit(1)

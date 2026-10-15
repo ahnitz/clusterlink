@@ -107,7 +107,7 @@ JOB_ROUTER_ROUTE_{name} @=route
   MaxIdleJobs = {site['max_idle']}
   SET ClusterlinkDestination = "{name}"
   SET Requirements = True
-  SET BatchExtraSubmitArgs = ifThenElse(isUndefined(ClusterlinkCachedEnv), undefined, strcat("transfer_input_files = ", "$", "(transfer_input_files), {site['root']}/cache/", ClusterlinkCachedEnv, ".tar.gz"))
+  SET BatchExtraSubmitArgs = strcat(ifThenElse(isUndefined(ClusterlinkRemoteSubmitArgs), "", ClusterlinkRemoteSubmitArgs), ifThenElse(isUndefined(ClusterlinkCachedEnv), "", strcat("transfer_input_files = ", "$", "(transfer_input_files), {site['root']}/cache/", ClusterlinkCachedEnv, ".tar.gz")))
   DELETE ClusterlinkEligible
 @route
 """

@@ -62,7 +62,7 @@ def enroll(args, state):
     if not 0 < limits["cache_bytes"] <= limits["storage_bytes"] or limits["reserve_bytes"] < 0:
         raise ValueError("Require 0 < cache budget <= storage budget and nonnegative reserve")
     site.update(scheduler=scheduler, limits=limits, probe=p, max_idle=args.max_idle, max_jobs=args.max_jobs)
-    portable = args.helpers == 'portable' or not all(p['commands'][n] for n in ['blahpd', 'condor_ft-gahp'])
+    portable = args.helpers == 'portable' or bool(sites.get(args.name, {}).get('helpers')) or not all(p['commands'][n] for n in ['blahpd', 'condor_ft-gahp'])
     if portable:
         from .helpers import helper_bundle
         data, digest, metadata = helper_bundle(p, state)
@@ -108,7 +108,7 @@ def cache(args, state):
         site = sites[name]
         result = remote_call(site, "check", digest)
         if not result["cached"]:
-            result = remote_call(site, "upload", digest, artifact.stat().st_size, payload=artifact.read_bytes())
+            result = remote_call(site, "upload", digest, artifact.stat().st_size, payload=artifact)
         print(json.dumps({"site": name, "sha256": digest, **result}))
 
 
@@ -138,7 +138,7 @@ def submit(args, state):
             result = remote_call(sites[name], 'check', cached_digest)
             if not result['cached']:
                 result = remote_call(sites[name], 'upload', cached_digest,
-                                     artifact.stat().st_size, payload=artifact.read_bytes())
+                                     artifact.stat().st_size, payload=artifact)
             print(json.dumps({'site': name, 'environment_cache': result}), file=sys.stderr)
     run_dir = state / 'jobs' / uuid.uuid4().hex
     run_dir.mkdir(parents=True)

@@ -191,7 +191,7 @@ def main():
             save(state / 'environment.json', selection)
             from . import pool
             pool.configure(state)
-            if (state / 'master.pid').exists():
+            if pool.running(state):
                 subprocess.run(['condor_reconfig'], env=pool.environment(state), check=True, stdout=sys.stderr)
             print('export CONDOR_CONFIG=' + shlex.quote(str(state / 'condor.config')))
             print('export CLUSTERLINK_STATE=' + shlex.quote(str(state)))

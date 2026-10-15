@@ -18,6 +18,19 @@ def route_key(name):
     return 'site_' + name.encode().hex()
 
 
+def running(state):
+    """Recognize this pool's live master, including after stale PID reuse."""
+    try:
+        pid = int((state / 'master.pid').read_text())
+        proc = Path('/proc') / str(pid)
+        command = (proc / 'cmdline').read_bytes().split(b'\0')[0]
+        config = b'CONDOR_CONFIG=' + str(state / 'condor.config').encode()
+        return (Path(os.fsdecode(command)).name == 'condor_master'
+                and config in (proc / 'environ').read_bytes().split(b'\0'))
+    except (OSError, ValueError):
+        return False
+
+
 def configure(state, local_slots=0):
     sites = json.loads((state / "sites.json").read_text())
     for name in ["log", "spool", "execute", "lock", "run"]:
@@ -132,13 +145,8 @@ def start(state):
     if config_check.returncode:
         raise RuntimeError('Invalid private Condor configuration: ' + config_check.stderr.strip())
     pidfile = state / "master.pid"
-    if pidfile.exists():
-        try:
-            os.kill(int(pidfile.read_text()), 0)
-        except ProcessLookupError:
-            pass
-        else:
-            raise RuntimeError("Managed pool already running")
+    if running(state):
+        raise RuntimeError("Managed pool already running")
     with (state / "log/master-console.log").open("ab") as log:
         proc = subprocess.Popen(["condor_master", "-f"], env=environment(state),
                                 stdin=subprocess.DEVNULL, stdout=log, stderr=log,

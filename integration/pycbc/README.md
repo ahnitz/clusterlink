@@ -29,3 +29,11 @@ python integration/pycbc/prepare.py --source local/pycbc-source \
 
 The complete workflow has been planned and submitted. It has not yet passed.
 See STATUS.md for verified stages.
+
+Portability fix during acceptance: pip initially selected a glibc 2.34 build of
+cryptography and locally compiled SQLAlchemy C extensions needing glibc 2.38.
+The older su workers cannot use those binaries. Keep the same cryptography
+version but select its `manylinux_2_28_x86_64` wheel; install SQLAlchemy 1.3.24
+with `DISABLE_SQLALCHEMY_CEXT=1` to use its Python fallback. These change package
+builds, not PyCBC algorithms. The initial failed run is retained for diagnosis;
+completion is still pending.

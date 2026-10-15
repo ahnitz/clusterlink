@@ -22,11 +22,12 @@ class HookTests(unittest.TestCase):
                  'GlobalJobId': 'test#1.0', 'ClusterlinkEnvironment': str(env),
                  'Arguments': "'a b' 'quoted'", 'RequestCpus': 4,
                  'TransferInput': 'data.txt', 'TransferOutput': 'result.txt'})
-            with patch('clusterlink.hooks.bundle', return_value=artifact), patch(
+            with patch('clusterlink.hooks.required_bundle_disk', return_value=2048), patch('clusterlink.hooks.bundle', return_value=artifact), patch(
                     'clusterlink.hooks.remote_call', return_value={'cached': True}) as remote:
                 out = prepare(ad, {'scheduler': 'condor'}, root)
             self.assertEqual(out['Arguments'], "'a b' 'quoted'")
             self.assertEqual(out['NodeNumber'], 4)
+            self.assertGreaterEqual(out['RequestDisk'], 65538)
             self.assertEqual(out['TransferInput'], 'data.txt')
             self.assertEqual(out['TransferOutput'], 'result.txt')
             self.assertEqual(out['ClusterlinkCachedEnv'], hashlib.sha256(b'test archive').hexdigest())

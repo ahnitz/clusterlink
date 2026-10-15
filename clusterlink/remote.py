@@ -22,7 +22,7 @@ def probe():
                 if os.access(d + "/" + n, os.X_OK):
                     commands[n] = d + "/" + n
                     break
-    return dict(home=str(Path.home()), machine=platform.machine(), libc=platform.libc_ver(), commands=commands)
+    return dict(python_version=list(sys.version_info[:2]), home=str(Path.home()), machine=platform.machine(), libc=platform.libc_ver(), commands=commands)
 
 
 def size(root):
@@ -249,6 +249,7 @@ def main():
                 raise RuntimeError("Checksum mismatch")
             temp.replace(target)
             pin(root, digest, lease)
+            remember_verified(root, digest, target)
         finally:
             temp.unlink(missing_ok=True)
         print(json.dumps({"cached": False, "uploaded_bytes": received, "path": str(target)}))

@@ -68,9 +68,9 @@ def run(host, command, mode="exec", payload=b"", timeout=120):
     return out
 
 
-def python_command(source, args=()):
+def python_command(source, args=(), interpreter="python3"):
     code = "import base64;exec(compile(base64.b64decode(" + repr(base64.b64encode(source.encode()).decode()) + "),'<clusterlink>','exec'))"
-    return shlex.join(["python3", "-c", code, *map(str, args)])
+    return shlex.join([interpreter, "-c", code, *map(str, args)])
 
 
 def relay(host, command, mode, options=()):

@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import shlex
 import stat
+import tarfile
 import uuid
 
 
@@ -64,6 +65,20 @@ def bundle(prefix, state):
         temp.unlink(missing_ok=True)
 
 
+def required_bundle_disk(artifact):
+    """Bytes needed for the immutable archive plus its unpacked environment."""
+    record = artifact.with_suffix('.disk.json')
+    if record.exists():
+        return json.loads(record.read_text())['bytes']
+    with tarfile.open(artifact) as archive:
+        unpacked = sum(member.size for member in archive if member.isfile())
+    total = artifact.stat().st_size + unpacked
+    temp = record.with_suffix('.' + uuid.uuid4().hex + '.tmp')
+    temp.write_text(json.dumps({'bytes': total}))
+    temp.replace(record)
+    return total
+
+
 def executable_command(value, prefix=None):
     """Return launch command and optional external file to transfer."""
     path = Path(value).expanduser()
@@ -88,7 +103,19 @@ def executable_command(value, prefix=None):
     return './' + shlex.quote(path.name), path
 
 
-def launcher(command, archive='environment.tar.gz', source_prefix=None, staged_script=None):
+def launcher(command, archive='environment.tar.gz', source_prefix=None, staged_script=None, outputs=()):
+    # A failed application may never create its declared outputs. Return its
+    # stderr and nonzero exit instead of losing diagnostics to a transfer hold.
+    safe_outputs = [str(p) for value in outputs if value
+                    for p in [Path(value)] if not p.is_absolute()
+                    and '..' not in p.parts and str(p) not in {'.', ''}]
+    failure = ''
+    if safe_outputs:
+        failure = 'finish() {\n  result=$?\n  if [ "$result" -ne 0 ]; then\n'
+        for value in safe_outputs:
+            quoted=shlex.quote(value); parent=shlex.quote(str(Path(value).parent))
+            failure += f'    [ -e {quoted} ] || (mkdir -p -- {parent} && touch -- {quoted}) || true\n'
+        failure += '  fi\n  exit "$result"\n}\ntrap finish EXIT\n'
     remap = ''
     if source_prefix:
         remap = ('source_prefix=' + shlex.quote(str(source_prefix).rstrip('/') + '/') + '\n'
@@ -114,4 +141,4 @@ export PYTHONNOUSERSITE=1
 "$CLUSTERLINK_ENV/bin/python" "$CLUSTERLINK_ENV/bin/conda-unpack"
 export PATH="$CLUSTERLINK_ENV/bin:$PATH"
 export CONDA_PREFIX="$CLUSTERLINK_ENV"
-'''.replace('ARCHIVE_PLACEHOLDER', shlex.quote(archive)) + remap + 'exec ' + command + ' "$@"\n'
+'''.replace('ARCHIVE_PLACEHOLDER', shlex.quote(archive)).replace('set -euo pipefail\n', 'set -euo pipefail\n' + failure) + remap + command + ' "$@"\n'

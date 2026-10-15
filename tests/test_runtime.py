@@ -29,6 +29,20 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(argv[-1], 'osg')
         self.assertIn(b'exec true', proc.stdin.write.call_args.args[0])
 
+    def test_failed_setup_returns_status_without_missing_output_hold(self):
+        import subprocess
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); work=root/'job'; work.mkdir()
+            (work/'partial.txt').write_text('original')
+            script=launcher('false', archive='absent.tar.gz',
+                            outputs=['result.txt','partial.txt','../outside.txt'])
+            result=subprocess.run(['bash'],input=script,text=True,cwd=work,capture_output=True)
+            self.assertNotEqual(result.returncode,0)
+            self.assertIn('absent.tar.gz',result.stderr)
+            self.assertEqual((work/'result.txt').read_bytes(),b'')
+            self.assertEqual((work/'partial.txt').read_text(),'original')
+            self.assertFalse((root/'outside.txt').exists())
+
     def test_entrypoint_and_external_python_script(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -45,7 +59,7 @@ class RuntimeTests(unittest.TestCase):
             cmd, file = executable_command(str(script), env)
             self.assertEqual(file, script)
             self.assertIn('"$CLUSTERLINK_ENV/bin/python"', cmd)
-            self.assertIn('exec ', launcher(cmd))
+            self.assertIn(cmd + ' "$@"', launcher(cmd))
 
     def test_environment_install_invalidates_fingerprint(self):
         with tempfile.TemporaryDirectory() as tmp:

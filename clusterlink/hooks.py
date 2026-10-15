@@ -10,7 +10,7 @@ import sys
 import classad2
 
 from .cli import remote_call
-from .environments import bundle, executable_command, launcher
+from .environments import bundle, executable_command, launcher, required_bundle_disk
 
 
 def prepare(ad, site, state):
@@ -27,6 +27,7 @@ def prepare(ad, site, state):
     with (state / '.pack.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         artifact = bundle(prefix, state)
+        environment_disk = required_bundle_disk(artifact)
     with artifact.open('rb') as stream:
         digest = hashlib.file_digest(stream, 'sha256').hexdigest()
     inputs = ad.get('TransferInput', '')
@@ -39,19 +40,35 @@ def prepare(ad, site, state):
     files = [p for p in inputs.split(',') if p]
     if external and str(external) not in files and external.name not in files:
         files.append(str(external))
+    input_disk = 0
+    for value in files:
+        path = Path(value)
+        if not path.is_absolute():
+            path = Path(ad['Iwd']) / path
+        if path.is_file():
+            input_disk += path.stat().st_size
+    # Packaging introduces disk usage the original submit file cannot know.
+    # Preserve the user's working-space request and add inputs plus environment.
+    ad['RequestDisk'] = int(ad.get('RequestDisk', 0)) + (environment_disk + input_disk + 1023)//1024 + 65536
     archive = digest + '.tar.gz'
     if site['scheduler'] == 'condor' and ad.get('ClusterlinkNoCache') is not True:
-        result = remote_call(site, 'check', digest, ident)
-        if not result['cached']:
-            remote_call(site, 'upload', digest, artifact.stat().st_size, ident,
-                        payload=artifact)
+        cache_key = hashlib.sha256(json.dumps(site, sort_keys=True).encode()).hexdigest()
+        # Serialize check+upload locally so simultaneous jobs do not send the
+        # same large environment over SSH before the first upload completes.
+        with (state / ('.upload-' + cache_key + '.lock')).open('a') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            result = remote_call(site, 'check', digest, ident)
+            if not result['cached']:
+                remote_call(site, 'upload', digest, artifact.stat().st_size, ident,
+                            payload=artifact)
         ad['ClusterlinkCachedEnv'] = digest
         ad['ClusterlinkLease'] = ident
     else:
         archive = artifact.name
         files.append(str(artifact))
     wrapper = work / 'launch.sh'
-    wrapper.write_text(launcher(command, archive, prefix, external.name if external else None))
+    wrapper.write_text(launcher(command, archive, prefix, external.name if external else None,
+                                ad.get('TransferOutput', '').split(',')))
     wrapper.chmod(0o700)
     ad['Cmd'] = str(wrapper)
     ad['TransferExecutable'] = True

@@ -30,7 +30,7 @@ def save(path, value):
 def remote_call(site, action, *args, payload=b""):
     source = Path(remote.__file__).read_text()
     argv = [action] if action == "probe" else [action, site["root"], *args]
-    output = run(site["ssh"], python_command(source, argv), site["transport"], payload, timeout=300)
+    output = run(site["ssh"], python_command(source, argv, site.get("python", "python3")), site["transport"], payload, timeout=300)
     return json.loads(output)
 
 
@@ -40,12 +40,30 @@ def enroll(args, state):
     sites = json.loads((state / "sites.json").read_text()) if (state / "sites.json").exists() else {}
     if args.name in sites and not args.update:
         raise ValueError("Site already enrolled; refusing to overwrite its settings")
+    limits = {"cache_bytes": int(args.cache_gb * 10**9), "storage_bytes": int(args.storage_gb * 10**9), "reserve_bytes": int(args.reserve_gb * 10**9)}
+    if not 0 < limits["cache_bytes"] <= limits["storage_bytes"] or limits["reserve_bytes"] < 0:
+        raise ValueError("Require 0 < cache budget <= storage budget and nonnegative reserve")
     site = {"ssh": destination(args.ssh)}
+    previous = sites.get(args.name, {})
+    if previous.get('python') and previous.get('ssh') == site['ssh']:
+        site['python'] = previous['python']
+        site['python_bootstrap'] = previous.get('python_bootstrap')
     failures = []
     for mode in (["login", "exec"] if args.transport == "auto" else [args.transport]):
         site["transport"] = mode
         try:
-            p = remote_call(site, "probe")
+            try:
+                if args.python == 'portable' and 'python' not in site:
+                    raise RuntimeError('Portable Python requested')
+                p = remote_call(site, "probe")
+                if p.get('python_version', [0]) < [3, 8]:
+                    raise RuntimeError('Remote Python is too old')
+            except RuntimeError:
+                from .bootstrap import shell_probe, install as install_python
+                home, arch = shell_probe(site)
+                site['root'] = args.remote_dir or home + '/.clusterlink/' + args.name
+                install_python(site, state, limits, home, arch)
+                p = remote_call(site, "probe")
             break
         except RuntimeError as error:
             failures.append(str(error))
@@ -58,9 +76,6 @@ def enroll(args, state):
     site["root"] = args.remote_dir or p["home"] + "/.clusterlink/" + args.name
     if not re.fullmatch(r"/[A-Za-z0-9_./-]+", site["root"]):
         raise ValueError("Remote project path must be absolute and contain no whitespace/metacharacters")
-    limits = {"cache_bytes": int(args.cache_gb * 10**9), "storage_bytes": int(args.storage_gb * 10**9), "reserve_bytes": int(args.reserve_gb * 10**9)}
-    if not 0 < limits["cache_bytes"] <= limits["storage_bytes"] or limits["reserve_bytes"] < 0:
-        raise ValueError("Require 0 < cache budget <= storage budget and nonnegative reserve")
     site.update(scheduler=scheduler, limits=limits, probe=p, max_idle=args.max_idle, max_jobs=args.max_jobs)
     portable = args.helpers == 'portable' or bool(sites.get(args.name, {}).get('helpers')) or not all(p['commands'][n] for n in ['blahpd', 'condor_ft-gahp'])
     if portable:
@@ -207,6 +222,7 @@ def main():
     p.add_argument("--ssh", required=True)
     p.add_argument('--update', action='store_true', help='Update an existing enrollment (stop its jobs first)')
     p.add_argument('--helpers', choices=['auto', 'portable'], default='auto')
+    p.add_argument('--python', choices=['auto', 'portable'], default='auto')
     p.add_argument("--scheduler", choices=["condor", "slurm"])
     p.add_argument("--transport", choices=["auto", "exec", "login"], default="auto")
     p.add_argument("--remote-dir")

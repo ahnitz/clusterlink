@@ -169,3 +169,13 @@ Direct installed-entry-point submission passed on OSG: local source 272 / remote
 16043017 ran `pycbc_inspiral --version` from the cached isolated environment,
 returned its version on stdout, empty stderr, and exit zero. No external launch
 script was supplied by the user.
+
+During the plotting batch, the active remote helper processes used approximately
+18 MiB RSS on su and 20 MiB on osg (a snapshot, not a peak guarantee). Owned
+storage was 2.80 GB and 2.50 GB, including caches of 2.56 GB and 2.34 GB.
+
+The main DAG reached 129/252 nodes. OSG allocation 16043019 reported running
+without input-transfer bytes, CPU, or memory usage for roughly ten minutes; native
+output access timed out. Source 277 was held, its routed job 287 was removed,
+and then it was released with su selected. This is an explicit test recovery;
+automatic cross-site failover is not implemented.

@@ -144,3 +144,8 @@ The main PyCBC DAG reached 53/252 nodes and all six initial inspiral jobs exited
 zero. Downstream analysis is running. A separate pool restart test is in progress.
 Twenty-three unit tests pass. Configuration now supports hyphenated enrollment
 names and pool startup waits until its scheduler accepts queries.
+
+The independent bootstrap-test pool was stopped and restarted while source job 1
+was running remotely. Grid job 2 recovered the same remote su ID 59269500 and
+returned `CRUSH-OG-10-5-207-23` with exit zero. A second start verified immediate
+scheduler readiness and an empty queue; the auxiliary pool is now stopped.

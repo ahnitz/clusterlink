@@ -177,8 +177,8 @@ CONDOR_CONFIG="$CLUSTERLINK_STATE/condor.config" condor_rm JOB_ID
 ```
 
 Stopping the pool does not remove remote jobs, caches, or enrollment. Cancellation
-and recovery after loss of established SSH helper connections have passed tests;
-full pool restart remains unverified. Do not delete state while jobs
+recovery after loss of established SSH helper connections, and a full private-pool
+restart with a remote job in flight have passed tests. Do not delete state while jobs
 are outstanding. `ssh_to_job JOB_ID` resolves routed remote Condor IDs and forwards SSH; actual
 interactive-session validation is still in progress.
 
@@ -186,6 +186,9 @@ interactive-session validation is still in progress.
 
 - Real execution is tested with remote HTCondor only. Slurm enrollment/route
   generation exists but has not been validated; cached delivery is Condor-only.
+- Nested output filenames work across the two Condor transfer hops. Outputs must
+  have distinct basenames; whole-directory transfers are not supported by the
+  underlying SSH grid transport.
 - Cache uploads enforce configured budgets and checksums. Native submissions
   acquire per-job leases; cleanup releases them, allowing LRU eviction. Legacy
   explicit `cache`/`--artifact` operations retain permanent pins.
@@ -198,6 +201,10 @@ interactive-session validation is still in progress.
   `--disk-mb`, and `--runtime` (seconds).
 - Pegasus CondorIO completed all 13 nodes of the two-stage example, with compute
   jobs on different clusters. The isolated PyCBC search test remains in progress.
+- A transferred private Apptainer runtime successfully ran a SIF with its own
+  glibc on both test clusters. OSG needed `--unsquash` because FUSE was unavailable.
+  This still requires permitted user namespaces. Automatic Conda-to-SIF packaging
+  is not implemented; the default backend remains conda-pack.
 
 See [TESTING.md](TESTING.md) for the validation plan. Run local unit tests with:
 

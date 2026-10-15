@@ -20,3 +20,17 @@ class PoolTests(unittest.TestCase):
                 self.assertRegex(key,r'^[A-Za-z_][A-Za-z0-9_]*$')
                 self.assertIn('JOB_ROUTER_ROUTE_'+key+' @=route',text)
                 self.assertIn('GridResource = "batch condor '+name+'"',text)
+
+    def test_disabled_site_retains_remote_identity_but_rejects_new_jobs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp)
+            (state/"pool.json").write_text(json.dumps({"port": 12345}))
+            site = {'scheduler': 'condor', 'max_jobs': 10, 'max_idle': 2,
+                    'root': '/home/test/.clusterlink/site', 'enabled': False}
+            (state/'sites.json').write_text(json.dumps({'site': site}))
+            text = configure(state).read_text()
+            self.assertIn('REQUIREMENTS False &&', text)
+            self.assertIn('GridResource = "batch condor site"', text)
+            site['enabled'] = True
+            (state/'sites.json').write_text(json.dumps({'site': site}))
+            self.assertIn('REQUIREMENTS True &&', configure(state).read_text())

@@ -124,7 +124,7 @@ CLUSTERLINK_HOOK_JOB_CLEANUP = {cleanup}
     for name, site in sites.items():
         text += f"""
 JOB_ROUTER_ROUTE_{route_key(name)} @=route
-  REQUIREMENTS (ClusterlinkSite =?= undefined || ClusterlinkSite == "auto" || ClusterlinkSite == "{name}")
+  REQUIREMENTS {"True" if site.get("enabled", True) else "False"} && (ClusterlinkSite =?= undefined || ClusterlinkSite == "auto" || ClusterlinkSite == "{name}")
   GridResource = "batch {site['scheduler']} {name}"
   MaxJobs = {site['max_jobs']}
   MaxIdleJobs = {site['max_idle']}

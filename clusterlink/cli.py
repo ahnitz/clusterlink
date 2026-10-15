@@ -76,7 +76,8 @@ def enroll(args, state):
     site["root"] = args.remote_dir or p["home"] + "/.clusterlink/" + args.name
     if not re.fullmatch(r"/[A-Za-z0-9_./-]+", site["root"]):
         raise ValueError("Remote project path must be absolute and contain no whitespace/metacharacters")
-    site.update(scheduler=scheduler, limits=limits, probe=p, max_idle=args.max_idle, max_jobs=args.max_jobs)
+    site.update(scheduler=scheduler, limits=limits, probe=p, max_idle=args.max_idle, max_jobs=args.max_jobs,
+                enabled=previous.get("enabled", True))
     portable = args.helpers == 'portable' or bool(sites.get(args.name, {}).get('helpers')) or not all(p['commands'][n] for n in ['blahpd', 'condor_ft-gahp'])
     if portable:
         from .helpers import helper_bundle
@@ -154,6 +155,9 @@ def main():
     p.add_argument("--reserve-gb", type=float, default=1)
     p.add_argument("--max-idle", type=int, default=2)
     p.add_argument("--max-jobs", type=int, default=10)
+    p = sub.add_parser("site", help="Enable or disable new routing without deleting enrollment")
+    p.add_argument("action", choices=["enable", "disable"])
+    p.add_argument("name")
     p = sub.add_parser("pack")
     p.add_argument("--env")
     p = sub.add_parser("cache")
@@ -195,6 +199,17 @@ def main():
                 subprocess.run(['condor_reconfig'], env=pool.environment(state), check=True, stdout=sys.stderr)
             print('export CONDOR_CONFIG=' + shlex.quote(str(state / 'condor.config')))
             print('export CLUSTERLINK_STATE=' + shlex.quote(str(state)))
+        elif args.command == "site":
+            sites = json.loads((state / "sites.json").read_text())
+            if args.name not in sites:
+                raise ValueError("Unknown enrolled site: " + args.name)
+            sites[args.name]["enabled"] = args.action == "enable"
+            save(state / "sites.json", sites)
+            from . import pool
+            pool.configure(state)
+            if pool.running(state):
+                subprocess.run(["condor_reconfig"], env=pool.environment(state), check=True)
+            print(args.name + (" enabled for new jobs" if args.action == "enable" else " disabled for new jobs; existing jobs remain tracked"))
         elif args.command == "enroll":
             enroll(args, state)
         elif args.command == "pack":

@@ -87,6 +87,18 @@ clusterlink pool configure
 CONDOR_CONFIG="$CLUSTERLINK_STATE/condor.config" condor_reconfig
 ```
 
+Temporarily stop new jobs going to a site without losing its existing job IDs:
+
+```bash
+clusterlink site disable first
+clusterlink site enable first
+```
+
+These commands reload the private pool when it is running. Disabling a site
+preserves its enrollment, cache, and tracking of accepted jobs; it does not cancel
+or migrate them. Enroll an alternate scheduler under a new site name. A shared
+home directory does not mean two login hosts share a scheduler queue.
+
 Enrollment automatically tries login-shell and command-shell transport. SSH
 allows nonprompting keyboard-interactive authentication after public-key
 acceptance, as required by some sites. Actual password/MFA prompts currently fail;

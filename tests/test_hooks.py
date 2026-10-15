@@ -4,10 +4,18 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 import classad2
-from clusterlink.hooks import prepare, serialize
+from clusterlink.hooks import prepare, serialize, remote_output_remaps
 
 
 class HookTests(unittest.TestCase):
+    def test_nested_outputs_survive_remote_condor_transfer(self):
+        self.assertEqual(remote_output_remaps('118674/result.hdf,plain.txt'),
+                         'transfer_output_remaps = "result.hdf=118674/result.hdf"\n')
+        self.assertEqual(remote_output_remaps('plain.txt'), '')
+        for invalid in ('a/result.hdf,b/result.hdf', '../result.hdf', '/tmp/result.hdf'):
+            with self.assertRaises(ValueError):
+                remote_output_remaps(invalid)
+
     def test_native_arguments_and_cached_environment(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

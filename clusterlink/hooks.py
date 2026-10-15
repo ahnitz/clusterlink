@@ -13,6 +13,23 @@ from .cli import remote_call
 from .environments import bundle, executable_command, launcher, required_bundle_disk
 
 
+def remote_output_remaps(outputs):
+    """Keep nested outputs in the remote sandbox where GridManager expects them."""
+    paths = [p for p in outputs.split(',') if p]
+    nested = [p for p in paths if '/' in p]
+    if not nested:
+        return ''
+    names = [Path(p).name for p in paths]
+    if len(names) != len(set(names)):
+        raise ValueError('Remote Condor outputs must have distinct basenames')
+    for path in nested:
+        if (Path(path).is_absolute() or '..' in Path(path).parts
+                or not re.fullmatch(r'[A-Za-z0-9_./-]+', path)):
+            raise ValueError('Nested remote output paths must be safe relative paths')
+    return 'transfer_output_remaps = "' + ';'.join(
+        Path(p).name + '=' + p for p in nested) + '"\n'
+
+
 def prepare(ad, site, state):
     # The convenience submit command has already prepared its launcher.
     if ad.get('ClusterlinkPrepared') is True:
@@ -80,6 +97,7 @@ def prepare(ad, site, state):
         ad['GPUNumber'] = int(ad['RequestGPUs'])
     if site['scheduler'] == 'condor':
         extra = 'request_disk = ' + str(int(ad.get('RequestDisk', 2097152))) + ' KB\n'
+        extra += remote_output_remaps(ad.get('TransferOutput', ''))
         if 'Requirements' in ad:
             extra += 'requirements = ' + str(ad.lookup('Requirements')) + '\n'
         ad['ClusterlinkRemoteSubmitArgs'] = extra

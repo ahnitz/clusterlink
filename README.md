@@ -27,10 +27,12 @@ compute node. No shared filesystem or container runtime is assumed for this path
   with Job Router and GridManager.
 - Working SSH access to a remote submission host and permission to submit jobs.
   Existing aliases, keys, agents, and jump hosts are reused.
-- Remote Python 3.8+ is currently required. Enrollment installs official HTCondor
+- Enrollment uses remote Python 3.8+ when available, or installs a checksum-verified,
+  private Python runtime under the enrolled directory. `--python portable` forces
+  this path. Enrollment also installs official HTCondor
   batch helpers in the user's project directory when missing; `--helpers portable`
-  requests this explicitly. It writes only user-owned configuration. A remote
-  Python bootstrap is still needed for hosts without Python.
+  requests this explicitly. It writes only user-owned configuration. Bootstrap
+  needs ordinary Linux shell utilities, including tar and sha256sum.
 - A compatible Linux Conda environment. Arbitrary system dependencies, GPU
   drivers, and architecture compatibility are not automatically resolved yet.
 

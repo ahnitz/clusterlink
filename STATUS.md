@@ -106,3 +106,19 @@ A native interactive `pwd` succeeded on one OSG worker with an inner terminal;
 other workers have stalled after successful SSH authentication. Remote native
 interactive support is therefore conditional, not yet a consistently passing
 package acceptance test.
+
+## Nested output transfer and bootstrap
+
+The explicit portable-Python enrollment succeeded on su in a separate owned
+bootstrap-test directory, including checksum verification and helper installation.
+The main PyCBC DAG reached 34/252 nodes; several inspiral jobs exited zero but
+were held during the second transfer hop because remote Condor flattened nested
+output paths. The hook now supplies remote basename-to-relative-path remaps.
+Completed outputs were recovered within their owned sandboxes without rerunning
+those jobs. Independent two-site nested-output tests are submitted. Twenty unit
+tests pass; full workflow acceptance is still pending.
+
+Failure launchers preserve a nonzero application exit and stderr, creating empty
+placeholders only for absent declared relative outputs. Existing partial files
+are preserved. This lets workflow engines see the real failure instead of a
+secondary missing-output transfer hold; placeholders are not successful results.

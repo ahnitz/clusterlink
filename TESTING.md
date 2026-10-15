@@ -49,7 +49,9 @@ first, then test `ssh_to_job LOCAL_CLUSTER.PROC` with direct and routed submissi
 Check remote ID resolution, the job working directory and identity, terminal input,
 Ctrl-C, clean exit, and SSH disconnect without job cancellation. Verify useful
 errors for pending/completed jobs, Slurm destinations, and disabled remote access.
-Inspect dry-run output before the first connection. This feature is not implemented yet; both enrolled test destinations use Condor.
+Inspect dry-run output before the first connection. The prototype is implemented;
+one OSG interactive command passed, but consistent worker support remains unverified.
+Both enrolled test destinations use Condor.
 
 ## Current status
 
@@ -69,6 +71,6 @@ not a passing test. Discover the maintained upstream test before selecting it.
 
 User-authorized adaptations for this hard test: add a Pegasus site definition
 to PyCBC, modify the test configuration, and replace hardcoded frame-data lookup
-with cache files in `/home/gwdata`. Keep all other changes minimal, retain an
+with cache files in `/home/ahnitz/gwdata`. Keep all other changes minimal, retain an
 exact patch, and do not modify the shared frame data. This data exception does
 not permit reuse of workstation software outside the isolated test environment.

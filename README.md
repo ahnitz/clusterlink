@@ -142,8 +142,8 @@ No manual archive creation or destination selection is required. `--env PREFIX`
 selects an environment explicitly; otherwise the active `CONDA_PREFIX` is used.
 An installed executable can replace the Python script, for example
 `clusterlink submit --env /path/to/env my-installed-command arguments`.
-Installed entry-point execution is implemented but not yet covered by a remote
-acceptance test. Inputs and outputs must currently have simple, distinct filenames.
+Installed entry-point relocation was verified with `pycbc_inspiral --version`
+on OSG. Convenience-command inputs and outputs currently need simple, distinct filenames.
 Declare every required data file; workstation paths are not automatically shared.
 
 Useful options, placed before the executable:
@@ -180,7 +180,9 @@ Stopping the pool does not remove remote jobs, caches, or enrollment. Cancellati
 recovery after loss of established SSH helper connections, and a full private-pool
 restart with a remote job in flight have passed tests. Do not delete state while jobs
 are outstanding. `ssh_to_job JOB_ID` resolves routed remote Condor IDs and forwards SSH; actual
-interactive-session validation is still in progress.
+interactive sessions depend on the remote pool permitting worker access. An OSG
+command succeeded in one test, but another worker connection stalled in native
+Condor CCB negotiation; universal interactive access is not verified.
 
 ## Limits and next milestones
 

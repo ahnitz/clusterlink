@@ -164,3 +164,8 @@ The main DAG has reached 87/252 nodes with no failed nodes. Follow-up workflow
 generators and final HTML assembly are configured as local orchestration jobs,
 while their scientific child jobs retain remote execution. A separate Pegasus
 planning check confirms final report assembly uses the local universe.
+
+Direct installed-entry-point submission passed on OSG: local source 272 / remote
+16043017 ran `pycbc_inspiral --version` from the cached isolated environment,
+returned its version on stdout, empty stderr, and exit zero. No external launch
+script was supplied by the user.

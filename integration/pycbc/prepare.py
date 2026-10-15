@@ -39,8 +39,25 @@ p=work/'executables.ini';old=p.read_text()
 new=old.replace('condor|request_disk = 1000','condor|request_disk = 8000').replace('condor|accounting_group = ligo.dev.o4.cbc.bbh.pycbcoffline','condor|+BatchRuntime = 3600').replace('pycbc|primary_site = condorpool_symlink','pycbc|primary_site = clusterlink').replace('pycbc|site = condorpool_copy','pycbc|site = clusterlink').replace('pycbc|site = condorpool_shared','pycbc|site = clusterlink')
 p.write_text(new);patch('executables.patch',old,new,'examples/search/executables.ini')
 p=work/'analysis.ini';old=p.read_text()
+# The workflow imports every supplied cache entry into its replica catalog.
+# Bound the input catalog to this test interval, retaining ordinary LCF records.
+import re
+start=int(re.search(r'^start-time\s*=\s*(\d+)',old,re.M).group(1))
+end=int(re.search(r'^end-time\s*=\s*(\d+)',old,re.M).group(1))
+selected=work/'frame-cache'
+selected.mkdir(exist_ok=True)
+for ifo in ['H1','L1','V1']:
+    lines=[]
+    for line in (caches/(ifo+'.cache')).read_text().splitlines():
+        parts=line.split()
+        if len(parts)==5 and float(parts[2]) < end+64 and float(parts[2])+float(parts[3]) > start-64:
+            lines.append(line)
+    if not lines:
+        raise ValueError('Cache has no entries for '+ifo+' in the test interval')
+    (selected/(ifo+'.cache')).write_text('\n'.join(lines)+'\n')
+
 new='\n'.join(line for line in old.splitlines() if '-frame-file =' not in line and not line.startswith('frame-files ='))+'\n'
-new=new.replace('datafind-method = AT_RUNTIME_FAKE_DATA','datafind-method = FROM_PREGENERATED_LCF_FILES\n'+'\n'.join(f'datafind-pregenerated-cache-file-{ifo.lower()} = {caches}/{ifo}.cache' for ifo in ['H1','L1','V1']))
+new=new.replace('datafind-method = AT_RUNTIME_FAKE_DATA','datafind-method = FROM_PREGENERATED_LCF_FILES\n'+'\n'.join(f'datafind-pregenerated-cache-file-{ifo.lower()} = {selected}/{ifo}.cache' for ifo in ['H1','L1','V1']))
 p.write_text(new);patch('analysis.patch',old,new,'examples/search/analysis.ini')
 props=installed/'pycbc/workflow/pegasus_files/pegasus-properties.conf'
 old=(source/'pycbc/workflow/pegasus_files/pegasus-properties.conf').read_text()

@@ -85,3 +85,24 @@ filesystem or container runtime was used. Evidence: ignored local directory
 Native routing now preserves disk/Requirements expressions, CPU and GPU counts;
 multiline hook output has a regression test. Bundle uploads stream from disk.
 The isolated PyCBC environment/install is in progress, not yet a passing test.
+
+## Recovery and PyCBC progress
+
+Removing source job 42 removed remote su job 59267643. Two private su helper
+SSH sessions were deliberately terminated during source 46 / grid 47 / remote
+59267730; GridManager restarted, recovered the same remote ID, and returned the
+job's hostname output successfully. This verifies recovery after an established
+submission; it does not prove exactly-once submission at every acknowledgement
+failure boundary.
+
+The requested `ahnitz/pycbc` branch `firinspiral3-multidet-asym` at
+`6c67f3fd2ee6e347f44be081ba150f420219ebfa` is installed in a separate environment.
+Its native reader passed short reads of H1/L1/V1 from the provided HDF5 caches.
+The first 252-node main workflow was stopped because its full multi-year caches
+caused unnecessary staging. Cache subsets now contain only the six files that
+intersect the padded analysis interval. The corrected plan/run is in progress.
+
+A native interactive `pwd` succeeded on one OSG worker with an inner terminal;
+other workers have stalled after successful SSH authentication. Remote native
+interactive support is therefore conditional, not yet a consistently passing
+package acceptance test.

@@ -182,8 +182,9 @@ interactive-session validation is still in progress.
 - A native Job Router hook prepares the selected site's environment automatically,
   including ordinary `condor_submit` and Pegasus compute jobs. An unreachable
   selected site currently retries rather than automatically failing over.
-- Resource requests in the smoke-test submission path are fixed at one CPU,
-  1 GiB memory, 2 GiB disk, and a five-minute runtime request.
+- The convenience command defaults to one CPU, 1 GiB memory, 2 GiB disk,
+  and a five-minute runtime request. Override these with `--cpus`, `--memory-mb`,
+  `--disk-mb`, and `--runtime` (seconds).
 - Pegasus CondorIO completed all 13 nodes of the two-stage example, with compute
   jobs on different clusters. The isolated PyCBC search test remains in progress.
 

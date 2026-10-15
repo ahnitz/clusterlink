@@ -16,9 +16,9 @@
  [workflow-datafind]
 -datafind-method = AT_RUNTIME_FAKE_DATA
 +datafind-method = FROM_PREGENERATED_LCF_FILES
-+datafind-pregenerated-cache-file-h1 = /home/ahnitz/gwdata/H1.cache
-+datafind-pregenerated-cache-file-l1 = /home/ahnitz/gwdata/L1.cache
-+datafind-pregenerated-cache-file-v1 = /home/ahnitz/gwdata/V1.cache
++datafind-pregenerated-cache-file-h1 = /home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/pycbc-test/frame-cache/H1.cache
++datafind-pregenerated-cache-file-l1 = /home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/pycbc-test/frame-cache/L1.cache
++datafind-pregenerated-cache-file-v1 = /home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/pycbc-test/frame-cache/V1.cache
  datafind-check-frames-exist = no_test
  datafind-check-segment-gaps = no_test
  

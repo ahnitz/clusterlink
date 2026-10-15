@@ -191,7 +191,8 @@ interactive-session validation is still in progress.
   underlying SSH grid transport.
 - Cache uploads enforce configured budgets and checksums. Native submissions
   acquire per-job leases; cleanup releases them, allowing LRU eviction. Legacy
-  explicit `cache`/`--artifact` operations retain permanent pins.
+  explicit `cache` operations retain permanent pins. `submit --artifact` uses
+  the same per-job leases as automatic packaging.
   `--storage-gb` is not a filesystem quota or a hard limit on scheduler staging.
 - A native Job Router hook prepares the selected site's environment automatically,
   including ordinary `condor_submit` and Pegasus compute jobs. An unreachable

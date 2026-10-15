@@ -10,7 +10,11 @@ PyCBC environment is used.
 configuration patch selects that site, removes a site-specific accounting group,
 and requests 1 GiB of working disk explicitly (`1024M`). Clusterlink adds input
 and packed/unpacked environment storage automatically. `properties.txt` records the
-local Pegasus property overrides. No search algorithm changes are intended.
+local Pegasus property overrides. Follow-up workflow generators and final HTML
+assembly run in the isolated local environment using Condor local-universe jobs:
+they create local absolute paths and child-workflow executable references. The
+scientific jobs in those child workflows still select Clusterlink. No search
+algorithm changes are intended.
 
 The user-selected source is `ahnitz/pycbc`, branch
 `firinspiral3-multidet-asym`, commit `6c67f3fd2ee6e347f44be081ba150f420219ebfa`.

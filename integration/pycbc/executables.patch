@@ -13,7 +13,7 @@
  pycbc|submit-directory = ./
  
  [pegasus_profile-condorpool_shared]
-@@ -77,11 +77,11 @@
+@@ -77,11 +77,30 @@
  
  [pegasus_profile-coinc]
  ; use different site options to check that they work
@@ -27,4 +27,23 @@
  
  [pegasus_profile-results_page]
 -pycbc|site = condorpool_shared
-+pycbc|site = clusterlink
++pycbc|site = local
++condor|universe = local
++env|PYTHONNOUSERSITE = 1
++env|MPLCONFIGDIR = /home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/pycbc-test/mpl
++env|XDG_CACHE_HOME = /home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/pycbc-test/cache
++
++[pegasus_profile-foreground_minifollowup]
++pycbc|site = local
++condor|universe = local
++env|PYTHONNOUSERSITE = 1
++
++[pegasus_profile-injection_minifollowup]
++pycbc|site = local
++condor|universe = local
++env|PYTHONNOUSERSITE = 1
++
++[pegasus_profile-singles_minifollowup]
++pycbc|site = local
++condor|universe = local
++env|PYTHONNOUSERSITE = 1

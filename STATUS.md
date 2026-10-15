@@ -159,3 +159,8 @@ bug in hook serialization (`NumHoldsByReason`); formatting newlines are now
 collapsed while escaped string contents are preserved. Twenty-four tests pass.
 Native interactive connection diagnostics on OSG stalled in its CCB connection
 to the worker; that conditional remote limitation remains unresolved.
+
+The main DAG has reached 87/252 nodes with no failed nodes. Follow-up workflow
+generators and final HTML assembly are configured as local orchestration jobs,
+while their scientific child jobs retain remote execution. A separate Pegasus
+planning check confirms final report assembly uses the local universe.

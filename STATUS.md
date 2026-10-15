@@ -72,3 +72,16 @@ This is a working two-site prototype, not the completed federation package.
   install with Conda's package metadata. A copy-only payload environment with its
   own package cache is being used to isolate unexpected case-distinct terminfo
   file disappearance in the earlier environments. No integrity check is bypassed.
+
+## Verified 2026-10-15: cross-cluster Pegasus
+
+Private DAG 24 completed all 13 nodes with exit status 0. Analyze ran on
+`CRUSH-OG-10-5-235-27` through su; summarize ran on `river-c016.ssl-hep.org`
+through osg. The returned result passes `examples/verify.py`, and both Python
+paths point into extracted `.clusterlink-env` directories. No remote shared
+filesystem or container runtime was used. Evidence: ignored local directory
+`local/pegasus-smoke-clean`. Fifteen focused unit tests pass.
+
+Native routing now preserves disk/Requirements expressions, CPU and GPU counts;
+multiline hook output has a regression test. Bundle uploads stream from disk.
+The isolated PyCBC environment/install is in progress, not yet a passing test.

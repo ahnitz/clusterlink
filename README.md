@@ -5,8 +5,8 @@ HTCondor job routing, and file staging.
 
 **Development prototype:** small scientific jobs have completed through two
 remote HTCondor submission hosts, including input/output transfer and execution
-from cached environment bundles. This is not yet the complete SSH-only,
-Pegasus-integrated package. See [STATUS.md](STATUS.md) for evidence and gaps.
+from cached environment bundles. A two-stage Pegasus CondorIO workflow also completed across both sites.
+The isolated PyCBC acceptance test is in progress. See [STATUS.md](STATUS.md) for evidence and gaps.
 
 ## What it does
 
@@ -24,12 +24,13 @@ compute node. No shared filesystem or container runtime is assumed for this path
 ## Current prerequisites
 
 - Linux workstation, Python 3.11+, Conda, OpenSSH, and a local HTCondor installation
-  with Job Router, GridManager, and BLAHP shell adapters.
+  with Job Router and GridManager.
 - Working SSH access to a remote submission host and permission to submit jobs.
   Existing aliases, keys, agents, and jump hosts are reused.
-- For this prototype, remote Python 3.8+, BLAHP (`blahpd`), `condor_ft-gahp`, and
-  `/etc/blah.config` must already exist. Automatically provisioning these helpers
-  in userspace is still needed to deliver the intended SSH-only prerequisite.
+- Remote Python 3.8+ is currently required. Enrollment installs official HTCondor
+  batch helpers in the user's project directory when missing; `--helpers portable`
+  requests this explicitly. It writes only user-owned configuration. A remote
+  Python bootstrap is still needed for hosts without Python.
 - A compatible Linux Conda environment. Arbitrary system dependencies, GPU
   drivers, and architecture compatibility are not automatically resolved yet.
 
@@ -87,8 +88,28 @@ CONDOR_CONFIG="$CLUSTERLINK_STATE/condor.config" condor_reconfig
 Enrollment automatically tries login-shell and command-shell transport. SSH
 allows nonprompting keyboard-interactive authentication after public-key
 acceptance, as required by some sites. Actual password/MFA prompts currently fail;
-interactive authentication and connection reuse are future work. Existing sites
-cannot yet be edited or re-enrolled in place.
+interactive authentication and connection reuse are future work. Use `enroll --update` to update a site after its jobs have stopped.
+
+## Ordinary Condor and Pegasus jobs
+
+Select the environment once in your submission shell:
+
+```bash
+eval "$(clusterlink activate --env "$CONDA_PREFIX")"
+condor_submit job.sub
+```
+
+The generated private configuration marks vanilla jobs for routing. A native
+Job Router hook bundles the environment, checks the selected site's cache, and
+wraps the executable. Keep using normal `transfer_input_files` and
+`transfer_output_files`. Pegasus should use a vanilla Condor site with
+`data.configuration = condorio`; see `examples/pegasus_smoke.py`.
+
+Clusterlink owns the cache and its leases. HTCondor owns job/data transport and
+remote scheduler tracking; Pegasus owns workflow dependencies. Only environment
+bundles are cached currently: arbitrary input data still follows ordinary Condor
+transfer. On a cache hit the archive does not cross the workstation-to-cluster
+link, but remote Condor still transfers it to each compute sandbox.
 
 ## Run the small example
 
@@ -147,23 +168,24 @@ CONDOR_CONFIG="$CLUSTERLINK_STATE/condor.config" condor_rm JOB_ID
 
 Stopping the pool does not remove remote jobs, caches, or enrollment. Cancellation
 and restart behavior still need acceptance testing. Do not delete state while jobs
-are outstanding. `ssh_to_job` is presently a placeholder, not a working feature.
+are outstanding. `ssh_to_job JOB_ID` resolves routed remote Condor IDs and forwards SSH; actual
+interactive-session validation is still in progress.
 
 ## Limits and next milestones
 
 - Real execution is tested with remote HTCondor only. Slurm enrollment/route
   generation exists but has not been validated; cached delivery is Condor-only.
-- Cache uploads enforce configured budgets and checksums. Cached artifacts remain
-  pinned; automatic release/eviction and bounded native staging are unfinished.
+- Cache uploads enforce configured budgets and checksums. Native submissions
+  acquire per-job leases; cleanup releases them, allowing LRU eviction. Legacy
+  explicit `cache`/`--artifact` operations retain permanent pins.
   `--storage-gb` is not a filesystem quota or a hard limit on scheduler staging.
-- Auto mode currently prepares a bundle on every candidate site before submission;
-  an unavailable site can prevent submission rather than being skipped.
-- The `submit` wrapper performs environment preparation. Ordinary `condor_submit`
-  and Pegasus jobs do not yet receive it automatically.
+- A native Job Router hook prepares the selected site's environment automatically,
+  including ordinary `condor_submit` and Pegasus compute jobs. An unreachable
+  selected site currently retries rather than automatically failing over.
 - Resource requests in the smoke-test submission path are fixed at one CPU,
   1 GiB memory, 2 GiB disk, and a five-minute runtime request.
-- Pegasus CondorIO and the isolated PyCBC mini search workflow are upcoming
-  acceptance tests, not completed features.
+- Pegasus CondorIO completed all 13 nodes of the two-stage example, with compute
+  jobs on different clusters. The isolated PyCBC search test remains in progress.
 
 See [TESTING.md](TESTING.md) for the validation plan. Run local unit tests with:
 

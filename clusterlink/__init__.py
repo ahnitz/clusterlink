@@ -1,0 +1,1 @@
+"""Personal HTCondor federation prototype."""

@@ -122,3 +122,25 @@ Failure launchers preserve a nonzero application exit and stderr, creating empty
 placeholders only for absent declared relative outputs. Existing partial files
 are preserved. This lets workflow engines see the real failure instead of a
 secondary missing-output transfer hold; placeholders are not successful results.
+
+## Verified: nested outputs and container feasibility
+
+Native prepared Conda jobs 209 (su) and 210 (osg) returned
+`nested/result.txt` to the intended local directory. Older remote Condor cannot
+create missing remap directories, so the final implementation lets remote Condor
+flatten outputs, fetches their basenames through GridManager, and materializes
+the original local remaps as literal ClassAd strings. This avoids depending on
+remote directory-creation behavior. An intentional failure returned exit 7,
+stderr, and its missing-output placeholder without a transfer hold.
+
+An independently downloaded, project-local Apptainer 1.5.4 runtime and Ubuntu
+22.04 SIF were transferred through CondorIO. On su host
+`CRUSH-OG-10-5-137-186` (glibc 2.31), the unprivileged image ran glibc 2.35.
+On osg host `epyc06` (glibc 2.34), FUSE was unavailable; `--unsquash --userns`
+succeeded and ran glibc 2.35 without a privileged runtime or admin changes.
+These are feasibility probes, not an automatic container-packaging backend.
+
+The main PyCBC DAG reached 53/252 nodes and all six initial inspiral jobs exited
+zero. Downstream analysis is running. A separate pool restart test is in progress.
+Twenty-three unit tests pass. Configuration now supports hyphenated enrollment
+names and pool startup waits until its scheduler accepts queries.

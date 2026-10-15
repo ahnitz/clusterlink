@@ -6,10 +6,16 @@ import shlex
 import socket
 import subprocess
 import sys
+import time
 
 
 def environment(state):
     return {**os.environ, "CONDOR_CONFIG": str(state / "condor.config"), "CLUSTERLINK_STATE": str(state)}
+
+
+def route_key(name):
+    # Enrollment names allow hyphens; Condor configuration identifiers do not.
+    return 'site_' + name.encode().hex()
 
 
 def configure(state, local_slots=0):
@@ -75,7 +81,7 @@ JOB_ROUTER_LOG = {state}/log/JobRouterLog
 JOB_ROUTER_LOCK = {state}/lock/JobRouterLock
 JOB_ROUTER_ROUND_ROBIN_SELECTION = True
 JOB_ROUTER_SOURCE_JOB_CONSTRAINT = ClusterlinkEligible =?= True && JobUniverse == 5
-JOB_ROUTER_ROUTE_NAMES = {', '.join(sites)}
+JOB_ROUTER_ROUTE_NAMES = {', '.join(route_key(name) for name in sites)}
 JOB_ROUTER_POLLING_PERIOD = 10
 NUM_CPUS = {max(1, local_slots)}
 MEMORY = 1024
@@ -104,13 +110,14 @@ CLUSTERLINK_HOOK_JOB_CLEANUP = {cleanup}
         text += 'CLUSTERLINK_HOOK_JOB_CLEANUP = ' + str(cleanup) + '\n'
     for name, site in sites.items():
         text += f"""
-JOB_ROUTER_ROUTE_{name} @=route
+JOB_ROUTER_ROUTE_{route_key(name)} @=route
   REQUIREMENTS (ClusterlinkSite =?= undefined || ClusterlinkSite == "auto" || ClusterlinkSite == "{name}")
   GridResource = "batch {site['scheduler']} {name}"
   MaxJobs = {site['max_jobs']}
   MaxIdleJobs = {site['max_idle']}
   SET ClusterlinkDestination = "{name}"
   SET Requirements = True
+  EVALSET TransferOutputRemaps = ClusterlinkOutputRemaps
   SET BatchExtraSubmitArgs = strcat(ifThenElse(isUndefined(ClusterlinkRemoteSubmitArgs), "", ClusterlinkRemoteSubmitArgs), ifThenElse(isUndefined(ClusterlinkCachedEnv), "", strcat("transfer_input_files = ", "$", "(transfer_input_files), {site['root']}/cache/", ClusterlinkCachedEnv, ".tar.gz")))
   DELETE ClusterlinkEligible
 @route
@@ -120,6 +127,10 @@ JOB_ROUTER_ROUTE_{name} @=route
 
 
 def start(state):
+    config_check = subprocess.run(['condor_config_val', '-config'], env=environment(state),
+                                  capture_output=True, text=True)
+    if config_check.returncode:
+        raise RuntimeError('Invalid private Condor configuration: ' + config_check.stderr.strip())
     pidfile = state / "master.pid"
     if pidfile.exists():
         try:
@@ -133,4 +144,18 @@ def start(state):
                                 stdin=subprocess.DEVNULL, stdout=log, stderr=log,
                                 start_new_session=True)
     pidfile.write_text(str(proc.pid))
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        if proc.poll() is not None:
+            raise RuntimeError('Private Condor master exited; inspect ' + str(state / 'log/master-console.log'))
+        try:
+            ready = subprocess.run(['condor_q', '-totals'], env=environment(state),
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3)
+            if ready.returncode == 0:
+                break
+        except subprocess.TimeoutExpired:
+            pass
+        time.sleep(0.2)
+    else:
+        raise RuntimeError('Private pool started but scheduler is not ready; inspect ' + str(state / 'log'))
     print(f"Started user-owned Condor master {proc.pid}; config {state / 'condor.config'}")

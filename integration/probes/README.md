@@ -1,0 +1,16 @@
+# Small acceptance payloads
+
+`nested-output.sh` creates `nested/result.txt`; declare that path in
+`transfer_output_files` and map `result.txt=nested/result.txt` locally. It also
+reports worker container capabilities. Test through ordinary vanilla submission,
+with the selected Conda environment, on each enrolled site.
+
+`failure.sh` deliberately exits 7 without creating its declared `missing.txt`.
+The expected result is exit 7, its diagnostic in stderr, and an empty placeholder
+output rather than a missing-output transfer hold.
+
+`sif.sh` expects `ubuntu22.sif` and a tarball containing an `apptainer-runtime/`
+private unprivileged installation. It tests the shipped runtime with user
+namespaces and explicit SIF extraction, using only job-local caches. The image
+and runtime are test inputs, not included in this repository. This is a backend
+feasibility test; automatic Conda-to-SIF packaging is not implemented.

@@ -45,3 +45,8 @@ remaining workflow explicitly selects the previously validated immutable archive
 using `clusterlink activate --env local/pycbc-env --artifact ARCHIVE`. This is an
 explicit snapshot choice, not an integrity-check bypass or automatic fallback.
 The ordinary automatic path was exercised before this external interference.
+
+The running main DAGMan had cached its original submit defaults. Its 182 already
+planned vanilla submit files were therefore given the same explicit
+`+ClusterlinkArtifact` setting; pending workflow sources were updated consistently.
+Newly started planners/DAGMan processes use the selected private configuration.

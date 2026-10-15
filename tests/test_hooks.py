@@ -4,17 +4,17 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 import classad2
-from clusterlink.hooks import prepare, serialize, remote_output_remaps
+from clusterlink.hooks import prepare, serialize, remote_output_settings
 
 
 class HookTests(unittest.TestCase):
     def test_nested_outputs_survive_remote_condor_transfer(self):
-        self.assertEqual(remote_output_remaps('118674/result.hdf,plain.txt'),
-                         'transfer_output_remaps = "result.hdf=118674/result.hdf"\n')
-        self.assertEqual(remote_output_remaps('plain.txt'), '')
+        self.assertEqual(remote_output_settings('118674/result.hdf,plain.txt'),
+                         'transfer_output_files = 118674/result.hdf,plain.txt\n')
+        self.assertEqual(remote_output_settings('plain.txt'), '')
         for invalid in ('a/result.hdf,b/result.hdf', '../result.hdf', '/tmp/result.hdf'):
             with self.assertRaises(ValueError):
-                remote_output_remaps(invalid)
+                remote_output_settings(invalid)
 
     def test_native_arguments_and_cached_environment(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -67,11 +67,18 @@ class HookTests(unittest.TestCase):
                     'clusterlink.hooks.remote_call', return_value={'cached': True}):
                 out = prepare(ad, {'scheduler': 'condor'}, root)
             pack.assert_not_called()
-            self.assertIn('result=nested/result', out['ClusterlinkRemoteSubmitArgs'])
+            self.assertIn('transfer_output_files = nested/result', out['ClusterlinkRemoteSubmitArgs'])
+            self.assertEqual(out['TransferOutput'], 'result')
 
     def test_prepared_convenience_submission_is_unchanged(self):
         ad = classad2.ClassAd({'ClusterlinkPrepared': True, 'Cmd': 'launch.sh'})
         self.assertIs(prepare(ad, {}, Path('/unused')), ad)
+
+    def test_preserves_local_output_mapping_through_router_conversion(self):
+        ad = classad2.ClassAd({'ClusterlinkPrepared': True,
+             'TransferOutputRemaps': 'result=nested/result'})
+        out = prepare(ad, {}, Path('/unused'))
+        self.assertEqual(out['ClusterlinkOutputRemaps'], 'result=nested/result')
 
 
 if __name__ == '__main__':

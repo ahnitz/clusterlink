@@ -15,7 +15,7 @@ from .environments import bundle, executable_command, launcher
 
 def prepare(ad, site, state):
     # The convenience submit command has already prepared its launcher.
-    if isinstance(ad.get('ClusterlinkRun'), str):
+    if ad.get('ClusterlinkPrepared') is True:
         return ad
     prefix = ad.get('ClusterlinkEnvironment')
     if not isinstance(prefix, str):
@@ -40,7 +40,7 @@ def prepare(ad, site, state):
     if external and str(external) not in files and external.name not in files:
         files.append(str(external))
     archive = digest + '.tar.gz'
-    if site['scheduler'] == 'condor':
+    if site['scheduler'] == 'condor' and ad.get('ClusterlinkNoCache') is not True:
         result = remote_call(site, 'check', digest, ident)
         if not result['cached']:
             remote_call(site, 'upload', digest, artifact.stat().st_size, ident,
@@ -51,7 +51,7 @@ def prepare(ad, site, state):
         archive = artifact.name
         files.append(str(artifact))
     wrapper = work / 'launch.sh'
-    wrapper.write_text(launcher(command, archive, prefix))
+    wrapper.write_text(launcher(command, archive, prefix, external.name if external else None))
     wrapper.chmod(0o700)
     ad['Cmd'] = str(wrapper)
     ad['TransferExecutable'] = True

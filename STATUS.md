@@ -51,3 +51,24 @@ user-side changes were unnecessary.
   with only the explicitly permitted adaptations listed in TESTING.md.
 
 This is a working two-site prototype, not the completed federation package.
+
+## Incremental development after the initial checkpoint
+
+- Added native Job Router preparation/cleanup hooks and `clusterlink activate`.
+  Ordinary `condor_submit` job 13.0 completed on su and passed the scientific
+  verifier; evidence is in `local/native-submit/`. Its cached input payload was
+  approximately 1.5 KB instead of retransferring the 111 MB environment.
+- Provisioned checksum-verified official HTCondor 25.0.14 helper bundles beneath
+  both remote home directories. The su native-submission test used these helpers.
+  No system helper installation is needed on this tested path.
+- Added per-job cache leases, release, LRU eviction of unpinned entries, concurrent
+  upload handling, and corruption/incomplete-upload tests. Legacy explicitly
+  cached bundles remain pinned. Thirteen unit tests pass.
+- Added interactive job-ID resolution and SSH forwarding; resolution is verified,
+  but a complete interactive command/session still needs acceptance testing.
+- Installed independent project-local Pegasus 5.1.3 and Java/Python tooling.
+  The two-stage CondorIO workflow is submitted; final success is still pending.
+- New setup uses pip for conda-pack rather than mixing a version-constrained pip
+  install with Conda's package metadata. A copy-only payload environment with its
+  own package cache is being used to isolate unexpected case-distinct terminfo
+  file disappearance in the earlier environments. No integrity check is bypassed.

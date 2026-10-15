@@ -21,7 +21,7 @@ def main():
     glite = root + "/glite"
     options = []
     if command == "blahpd":
-        argv = ["env", "BLAHPD_LOCATION=" + glite, "GLITE_LOCATION=" + glite,
+        argv = ["env", "LD_LIBRARY_PATH=" + glite + '/lib', "BLAHPD_LOCATION=" + glite, "GLITE_LOCATION=" + glite,
                 "TMPDIR=" + root + "/tmp", glite + "/bin/blahpd"]
     elif command == "condor_ft-gahp":
         # Follow remote_gahp's reverse SSH forwarding convention. The helper
@@ -31,7 +31,7 @@ def main():
             raise RuntimeError("Missing/unsupported GridManager callback address")
         port = random.SystemRandom().randrange(32768, 61000)
         options = ["-o", "ExitOnForwardFailure=yes", "-R", f"{port}:{address.group(1)}"]
-        argv = ["env", "CONDOR_CONFIG=" + glite + "/etc/condor_config.ft-gahp",
+        argv = ["env", "LD_LIBRARY_PATH=" + glite + '/lib', "CONDOR_CONFIG=" + glite + "/etc/condor_config.ft-gahp",
                 "TMPDIR=" + root + "/tmp", glite + "/bin/condor_ft-gahp", "-f"]
         print(f"Allocated port {port} for remote forward to", file=sys.stderr, flush=True)
     else:

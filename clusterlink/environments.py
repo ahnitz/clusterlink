@@ -88,13 +88,22 @@ def executable_command(value, prefix=None):
     return './' + shlex.quote(path.name), path
 
 
-def launcher(command, archive='environment.tar.gz', source_prefix=None):
+def launcher(command, archive='environment.tar.gz', source_prefix=None, staged_script=None):
     remap = ''
     if source_prefix:
         remap = ('source_prefix=' + shlex.quote(str(source_prefix).rstrip('/') + '/') + '\n'
                  'mapped=()\nfor arg in "$@"; do\n'
                  '  mapped+=("${arg//"$source_prefix"/"$CLUSTERLINK_ENV/"}")\ndone\n'
                  'set -- "${mapped[@]}"\n')
+        if staged_script:
+            # Pegasus and other workflow engines generate text launchers that
+            # can contain absolute paths into the selected local environment.
+            code = ('from pathlib import Path;import sys;'
+                    'p=Path(sys.argv[1]);data=p.read_bytes();'
+                    'old=sys.argv[2].encode();new=sys.argv[3].encode();'
+                    'p.write_bytes(data.replace(old,new)) if b"\\x00" not in data and old in data else None')
+            remap += ('"$CLUSTERLINK_ENV/bin/python" -c ' + shlex.quote(code) + ' '
+                      + shlex.quote(staged_script) + ' "$source_prefix" "$CLUSTERLINK_ENV/"\n')
     return '''#!/bin/bash
 set -euo pipefail
 mkdir .clusterlink-env

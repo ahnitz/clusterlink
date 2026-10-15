@@ -86,6 +86,9 @@ KILL = False
 WANT_SUSPEND = False
 WANT_VACATE = False
 MAX_DEFAULT_LOG = 10000000
+JOB_ROUTER_HOOK_KEYWORD = CLUSTERLINK
+CLUSTERLINK_HOOK_TRANSLATE_JOB = {hook}
+CLUSTERLINK_HOOK_JOB_CLEANUP = {cleanup}
 """
     selected = state / 'environment.json'
     if selected.exists():

@@ -9,6 +9,8 @@ import shutil
 import subprocess
 import sys
 import time
+import io
+import tarfile
 
 
 def probe():
@@ -43,6 +45,25 @@ def checksum(path):
     return h.hexdigest()
 
 
+def cache_signature(path):
+    s = path.stat()
+    return [s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns]
+
+
+def remember_verified(root, digest, target):
+    directory = root / 'verified'
+    directory.mkdir(exist_ok=True)
+    (directory / digest).write_text(json.dumps(cache_signature(target)))
+
+
+def verify_cached(root, digest, target):
+    record = root / 'verified' / digest
+    if record.exists() and json.loads(record.read_text()) == cache_signature(target):
+        return
+    if checksum(target) != digest:
+        raise RuntimeError('Cached artifact checksum mismatch')
+
+
 def pin(root, digest, lease):
     if lease:
         if not re.fullmatch(r'[0-9a-f]{64}', lease):
@@ -61,7 +82,8 @@ def pinned(root, artifact):
 
 def install(root, settings, scripts):
     p = probe()
-    if not p["commands"]["blahpd"] or not p["commands"]["condor_ft-gahp"]:
+    portable = (root / 'helpers.json').exists()
+    if not portable and (not p["commands"]["blahpd"] or not p["commands"]["condor_ft-gahp"]):
         raise RuntimeError("Native BLAHP/file-transfer helpers unavailable; portable helper deployment not yet implemented")
     if root.exists() and not (root / "owner.json").exists():
         raise RuntimeError("Refusing to adopt an unmarked existing remote directory")
@@ -70,12 +92,14 @@ def install(root, settings, scripts):
         (root / d).mkdir(parents=True, exist_ok=True)
     (root / "owner.json").write_text(json.dumps(settings, indent=2))
     for name in ["blahpd", "condor_ft-gahp"]:
+        if portable:
+            continue
         target = root / "glite/bin" / name
         if target.is_symlink():
             target.unlink()
         target.symlink_to(p["commands"][name])
     candidates = [Path("/usr/libexec/blahp"), Path("/usr/lib/blahp"), Path("/usr/lib/condor"), Path("/usr/libexec/condor")]
-    source = next((d for d in candidates if (d / "blah_common_submit_functions.sh").exists()), Path('/usr/sbin'))
+    source = root / 'glite/sbin' if portable else next((d for d in candidates if (d / "blah_common_submit_functions.sh").exists()), Path('/usr/sbin'))
     # Deploy the submitting installation's maintained shell adapters; preserve
     # their upstream copyright notices. No system-wide remote installation.
     for name, content in scripts.items():
@@ -89,7 +113,7 @@ def install(root, settings, scripts):
         link = root / "glite/bin" / name
         if not link.exists():
             link.symlink_to("../libexec", target_is_directory=True)
-    config = Path("/etc/blah.config").read_text()
+    config = (root / 'glite/etc/blah.config' if portable else Path('/etc/blah.config')).read_text()
     config += f'\nblah_libexec_directory="{root}/glite/libexec"\nblah_sbin_directory="{source}"\nblah_temp_dir="{root}/tmp"\nblah_shared_directories=/\nblah_run_in_workdir=yes\nblah_max_threaded_cmds=4\n'
     (root / "glite/etc/blah.config").write_text(config)
     (root / "glite/etc/condor_config.ft-gahp").write_text(
@@ -99,12 +123,48 @@ def install(root, settings, scripts):
     return p
 
 
+def bootstrap(root, settings, digest, metadata):
+    if root.exists() and not (root / 'owner.json').exists():
+        raise RuntimeError('Refusing to adopt an unmarked remote directory')
+    data = sys.stdin.buffer.read()
+    if hashlib.sha256(data).hexdigest() != digest:
+        raise RuntimeError('Helper bundle checksum mismatch')
+    root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    with tarfile.open(fileobj=io.BytesIO(data)) as archive:
+        members = archive.getmembers()
+        total = sum(m.size for m in members)
+        if size(root) + total > settings['storage_bytes']:
+            raise RuntimeError('Helpers would exceed project storage budget')
+        if shutil.disk_usage(root).free < total + settings['reserve_bytes']:
+            raise RuntimeError('Insufficient free space for helpers')
+        for member in members:
+            path = Path(member.name)
+            if not member.isfile() or path.is_absolute() or '..' in path.parts:
+                raise ValueError('Unsafe helper archive member')
+            target = root / 'glite' / path
+            # Never follow a preexisting binary symlink into system directories.
+            if target.is_symlink():
+                target.unlink()
+            if (root / 'glite').resolve() not in target.resolve().parents:
+                raise ValueError('Helper path escapes managed directory')
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with archive.extractfile(member) as source, target.open('wb') as output:
+                shutil.copyfileobj(source, output)
+            target.chmod(member.mode & 0o700)
+    (root / 'owner.json').write_text(json.dumps(settings))
+    (root / 'helpers.json').write_text(json.dumps(metadata))
+    return {'installed_bytes': total, **metadata}
+
+
 def main():
     action = sys.argv[1]
     if action == "probe":
         print(json.dumps(probe()))
         return
     root = root_path(sys.argv[2])
+    if action == 'bootstrap':
+        print(json.dumps(bootstrap(root, json.loads(sys.argv[3]), sys.argv[4], json.loads(sys.argv[5]))))
+        return
     if action == "install":
         print(json.dumps(install(root, json.loads(sys.argv[3]), json.load(sys.stdin))))
         return
@@ -112,7 +172,9 @@ def main():
     with (root / ".cache.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         if action == "status":
-            print(json.dumps({"cache_bytes": size(root / "cache"), "total_bytes": size(root), **settings}))
+            print(json.dumps({"cache_used_bytes": size(root / "cache"), "total_bytes": size(root),
+                              'active_leases': sum(1 for p in (root / 'leases').glob('*/*') if p.is_file()),
+                              **settings}))
             return
         digest = sys.argv[3]
         if not re.fullmatch(r"[0-9a-f]{64}", digest):
@@ -128,10 +190,10 @@ def main():
         if action == "check":
             exists = target.exists()
             if exists:
-                if checksum(target) != digest:
-                    raise RuntimeError('Cached artifact checksum mismatch')
+                verify_cached(root, digest, target)
                 pin(root, digest, sys.argv[4] if len(sys.argv) > 4 else None)
                 os.utime(target, None)
+                remember_verified(root, digest, target)
             print(json.dumps({"cached": exists, "path": str(target)}))
             return
         if action != "upload":
@@ -154,6 +216,7 @@ def main():
             if h.hexdigest() != digest or checksum(target) != digest:
                 raise RuntimeError('Checksum mismatch')
             pin(root, digest, lease)
+            remember_verified(root, digest, target)
             print(json.dumps({'cached': True, 'uploaded_bytes': 0, 'path': str(target)}))
             return
         # LRU eviction considers only entries without outstanding job leases.

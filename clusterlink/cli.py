@@ -12,6 +12,7 @@ import uuid
 
 from . import remote
 from .transport import destination, python_command, run
+from .submission import submit as submit_native
 
 
 def state_dir(args):
@@ -37,7 +38,7 @@ def enroll(args, state):
     if not re.fullmatch(r"[a-z][a-z0-9_-]*", args.name):
         raise ValueError("Site names must be lowercase letters, digits, underscores, or hyphens")
     sites = json.loads((state / "sites.json").read_text()) if (state / "sites.json").exists() else {}
-    if args.name in sites:
+    if args.name in sites and not args.update:
         raise ValueError("Site already enrolled; refusing to overwrite its settings")
     site = {"ssh": destination(args.ssh)}
     failures = []
@@ -61,11 +62,17 @@ def enroll(args, state):
     if not 0 < limits["cache_bytes"] <= limits["storage_bytes"] or limits["reserve_bytes"] < 0:
         raise ValueError("Require 0 < cache budget <= storage budget and nonnegative reserve")
     site.update(scheduler=scheduler, limits=limits, probe=p, max_idle=args.max_idle, max_jobs=args.max_jobs)
+    portable = args.helpers == 'portable' or not all(p['commands'][n] for n in ['blahpd', 'condor_ft-gahp'])
+    if portable:
+        from .helpers import helper_bundle
+        data, digest, metadata = helper_bundle(p, state)
+        remote_call(site, 'bootstrap', json.dumps(limits), digest, json.dumps(metadata), payload=data)
+        site['helpers'] = metadata
     adapters = next((p for p in [Path('/usr/libexec/blahp'), Path('/usr/lib/condor'), Path('/usr/libexec/condor')]
                      if (p / 'blah_common_submit_functions.sh').exists()), None)
-    if adapters is None:
+    if adapters is None and not portable:
         raise ValueError('Local HTCondor BLAHP shell adapters are not installed')
-    scripts = {p.name: p.read_text() for p in adapters.glob('*.sh')
+    scripts = {} if portable else {p.name: p.read_text() for p in adapters.glob('*.sh')
                if p.name.startswith(('blah', 'condor', 'slurm', 'pbs', 'lsf', 'sge'))}
     remote_call(site, "install", json.dumps(limits), payload=json.dumps(scripts).encode())
     sites[args.name] = site
@@ -106,6 +113,8 @@ def cache(args, state):
 
 
 def submit(args, state):
+    if not args.artifact:
+        return submit_native(args, state)
     from .pool import environment
     from .environments import bundle, executable_command, launcher as make_launcher
     prefix = args.env or os.environ.get('CONDA_PREFIX')
@@ -148,7 +157,7 @@ def submit(args, state):
         shutil.copy2(artifact, run_dir / 'environment.tar.gz')
         names.append('environment.tar.gz')
     launcher = run_dir / 'launch.sh'
-    launcher.write_text(make_launcher(command, cached_digest + '.tar.gz' if cached_digest else 'environment.tar.gz'))
+    launcher.write_text(make_launcher(command, cached_digest + '.tar.gz' if cached_digest else 'environment.tar.gz', prefix, script.name if script else None))
     launcher.chmod(0o700)
     sites = json.loads((state / 'sites.json').read_text())
     if args.site != 'auto' and args.site not in sites:
@@ -174,6 +183,7 @@ request_disk = 2097152
 +ClusterlinkEligible = True
 +ClusterlinkSite = "{args.site}"
 +ClusterlinkRun = "{run_dir.name}"
++ClusterlinkPrepared = True
 {('+ClusterlinkCachedEnv = ' + json.dumps(cached_digest)) if cached_digest else ''}
 queue
 '''
@@ -193,6 +203,8 @@ def main():
     p = sub.add_parser("enroll")
     p.add_argument("name")
     p.add_argument("--ssh", required=True)
+    p.add_argument('--update', action='store_true', help='Update an existing enrollment (stop its jobs first)')
+    p.add_argument('--helpers', choices=['auto', 'portable'], default='auto')
     p.add_argument("--scheduler", choices=["condor", "slurm"])
     p.add_argument("--transport", choices=["auto", "exec", "login"], default="auto")
     p.add_argument("--remote-dir")
@@ -262,7 +274,8 @@ def main():
 
 
 def ssh_main():
-    raise SystemExit("Interactive forwarding is not implemented yet")
+    from .interactive import main as interactive_main
+    interactive_main()
 
 
 if __name__ == "__main__":

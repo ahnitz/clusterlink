@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Small deterministic payload; requires NumPy from the packaged environment."""
 import argparse
 import json

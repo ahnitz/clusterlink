@@ -37,3 +37,11 @@ version but select its `manylinux_2_28_x86_64` wheel; install SQLAlchemy 1.3.24
 with `DISABLE_SQLALCHEMY_CEXT=1` to use its Python fallback. These change package
 builds, not PyCBC algorithms. The initial failed run is retained for diagnosis;
 completion is still pending.
+
+During the run, an external process repeatedly renamed ncurses aliases to
+`*_CaseConflict`, breaking the live local environment's Conda inventory. The
+remaining workflow explicitly selects the previously validated immutable archive
+`4bf0900e4ab35c9b0a7e8e4aced2f7b3be5260ea367542fc42434c0efdb987ce`
+using `clusterlink activate --env local/pycbc-env --artifact ARCHIVE`. This is an
+explicit snapshot choice, not an integrity-check bypass or automatic fallback.
+The ordinary automatic path was exercised before this external interference.

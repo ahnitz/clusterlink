@@ -51,6 +51,24 @@ class HookTests(unittest.TestCase):
         self.assertEqual(decoded['ClusterlinkRemoteSubmitArgs'],
                          original['ClusterlinkRemoteSubmitArgs'])
 
+    def test_explicit_archive_does_not_repack_mutable_environment(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            exe = root / 'bin' / 'python'
+            exe.parent.mkdir()
+            exe.write_text('placeholder')
+            archive = root / 'snapshot.tar.gz'
+            archive.write_bytes(b'snapshot')
+            ad = classad2.ClassAd({'Cmd': str(exe), 'Iwd': tmp,
+                 'GlobalJobId': 'snapshot#1', 'ClusterlinkEnvironment': tmp,
+                 'ClusterlinkArtifact': str(archive), 'TransferOutput': 'nested/result'})
+            with patch('clusterlink.hooks.bundle') as pack, patch(
+                    'clusterlink.hooks.required_bundle_disk', return_value=100), patch(
+                    'clusterlink.hooks.remote_call', return_value={'cached': True}):
+                out = prepare(ad, {'scheduler': 'condor'}, root)
+            pack.assert_not_called()
+            self.assertIn('result=nested/result', out['ClusterlinkRemoteSubmitArgs'])
+
     def test_prepared_convenience_submission_is_unchanged(self):
         ad = classad2.ClassAd({'ClusterlinkPrepared': True, 'Cmd': 'launch.sh'})
         self.assertIs(prepare(ad, {}, Path('/unused')), ad)

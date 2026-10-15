@@ -43,7 +43,13 @@ def prepare(ad, site, state):
     work.mkdir(parents=True, exist_ok=True)
     with (state / '.pack.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        artifact = bundle(prefix, state)
+        selected = ad.get('ClusterlinkArtifact')
+        if selected is not None:
+            if not isinstance(selected, str) or not Path(selected).is_file():
+                raise ValueError('ClusterlinkArtifact must name an existing conda-pack archive')
+            artifact = Path(selected).resolve()
+        else:
+            artifact = bundle(prefix, state)
         environment_disk = required_bundle_disk(artifact)
     with artifact.open('rb') as stream:
         digest = hashlib.file_digest(stream, 'sha256').hexdigest()

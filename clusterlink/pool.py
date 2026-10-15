@@ -92,10 +92,14 @@ CLUSTERLINK_HOOK_JOB_CLEANUP = {cleanup}
 """
     selected = state / 'environment.json'
     if selected.exists():
-        prefix = json.loads(selected.read_text())['prefix']
+        selection = json.loads(selected.read_text())
+        prefix = selection['prefix']
         text += '\nSUBMIT_ATTRS = ClusterlinkEnvironment, ClusterlinkEligible\n'
         text += 'ClusterlinkEnvironment = ' + json.dumps(prefix) + '\n'
         text += 'ClusterlinkEligible = True\nJOB_ROUTER_HOOK_KEYWORD = CLUSTERLINK\n'
+        if selection.get('artifact'):
+            text += 'SUBMIT_ATTRS = $(SUBMIT_ATTRS), ClusterlinkArtifact\n'
+            text += 'ClusterlinkArtifact = ' + json.dumps(selection['artifact']) + '\n'
         text += 'CLUSTERLINK_HOOK_TRANSLATE_JOB = ' + str(hook) + '\n'
         text += 'CLUSTERLINK_HOOK_JOB_CLEANUP = ' + str(cleanup) + '\n'
     for name, site in sites.items():

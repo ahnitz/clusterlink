@@ -217,6 +217,7 @@ def main():
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser('activate', help='Select a Conda environment for ordinary Condor submissions')
     p.add_argument('--env', default=os.environ.get('CONDA_PREFIX'))
+    p.add_argument('--artifact', help='Explicitly pin an existing conda-pack archive for subsequent submissions')
     p = sub.add_parser("enroll")
     p.add_argument("name")
     p.add_argument("--ssh", required=True)
@@ -259,7 +260,13 @@ def main():
         if args.command == 'activate':
             if not args.env or not (Path(args.env) / 'conda-meta').is_dir():
                 raise ValueError('Activate a Conda environment or pass --env PREFIX')
-            save(state / 'environment.json', {'prefix': str(Path(args.env).resolve())})
+            selection = {'prefix': str(Path(args.env).resolve())}
+            if args.artifact:
+                artifact = Path(args.artifact).resolve()
+                if not artifact.is_file():
+                    raise ValueError('Environment archive does not exist')
+                selection['artifact'] = str(artifact)
+            save(state / 'environment.json', selection)
             from . import pool
             pool.configure(state)
             if (state / 'master.pid').exists():

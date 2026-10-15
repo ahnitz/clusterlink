@@ -107,6 +107,14 @@ wraps the executable. Keep using normal `transfer_input_files` and
 `transfer_output_files`. Pegasus should use a vanilla Condor site with
 `data.configuration = condorio`; see `examples/pegasus_smoke.py`.
 
+For reproducible runs, `clusterlink activate --env PREFIX --artifact ARCHIVE`
+explicitly selects an existing conda-pack archive instead of repacking the live
+environment. Use an archive created from that prefix; executable paths are still
+relocated relative to it. Run `activate --env PREFIX` again to return to automatic
+packaging. Existing queued jobs retain their submission-time selection. A single
+submit file can instead set `+ClusterlinkArtifact = "/absolute/environment.tar.gz"`.
+There is no automatic fallback to old archives when a live environment is damaged.
+
 Clusterlink owns the cache and its leases. HTCondor owns job/data transport and
 remote scheduler tracking; Pegasus owns workflow dependencies. Only environment
 bundles are cached currently: arbitrary input data still follows ordinary Condor
@@ -169,7 +177,8 @@ CONDOR_CONFIG="$CLUSTERLINK_STATE/condor.config" condor_rm JOB_ID
 ```
 
 Stopping the pool does not remove remote jobs, caches, or enrollment. Cancellation
-and restart behavior still need acceptance testing. Do not delete state while jobs
+and recovery after loss of established SSH helper connections have passed tests;
+full pool restart remains unverified. Do not delete state while jobs
 are outstanding. `ssh_to_job JOB_ID` resolves routed remote Condor IDs and forwards SSH; actual
 interactive-session validation is still in progress.
 

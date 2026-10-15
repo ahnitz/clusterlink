@@ -50,3 +50,16 @@ The running main DAGMan had cached its original submit defaults. Its 182 already
 planned vanilla submit files were therefore given the same explicit
 `+ClusterlinkArtifact` setting; pending workflow sources were updated consistently.
 Newly started planners/DAGMan processes use the selected private configuration.
+
+After the root DAG finishes, validate completion and basic scientific-output
+integrity with the isolated environment:
+
+```bash
+local/pycbc-env/bin/python integration/pycbc/validate.py \
+  local/pycbc-test/output-cache --report local/pycbc-test/validation.json
+```
+
+The validator checks the root DAG exit status, positive finite template masses,
+nonempty finite trigger SNRs in both search branches for all three detectors,
+and finite injection optimal SNRs. `--allow-incomplete` permits an explicitly
+incomplete progress report; it never reports a running workflow as complete.

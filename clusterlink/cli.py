@@ -113,6 +113,8 @@ def cache(args, state):
 
 
 def submit(args, state):
+    if min(args.cpus, args.memory_mb, args.disk_mb, args.runtime) <= 0:
+        raise ValueError('CPU, memory, disk and runtime requests must be positive')
     if not args.artifact:
         return submit_native(args, state)
     from .pool import environment
@@ -175,11 +177,11 @@ transfer_output_files = {','.join(args.output)}
 output = stdout.txt
 error = stderr.txt
 log = events.log
-request_cpus = 1
-request_memory = 1024
-request_disk = 2097152
-+BatchRuntime = 300
-+NodeNumber = 1
+request_cpus = {args.cpus}
+request_memory = {args.memory_mb}
+request_disk = {args.disk_mb * 1024}
++BatchRuntime = {args.runtime}
++NodeNumber = {args.cpus}
 +ClusterlinkEligible = True
 +ClusterlinkSite = "{args.site}"
 +ClusterlinkRun = "{run_dir.name}"
@@ -224,6 +226,10 @@ def main():
     p.add_argument('--env', help='Conda environment prefix (default: active environment)')
     p.add_argument('--no-cache', action='store_true', help='Stage the environment with every job')
     p.add_argument('--site', default='auto')
+    p.add_argument('--cpus', type=int, default=1)
+    p.add_argument('--memory-mb', type=int, default=1024)
+    p.add_argument('--disk-mb', type=int, default=2048)
+    p.add_argument('--runtime', type=int, default=300, help='Requested runtime in seconds')
     p.add_argument('--input', action='append', default=[])
     p.add_argument('--output', action='append', default=[])
     p.add_argument('script')

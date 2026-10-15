@@ -38,7 +38,7 @@ def resolve(state, job):
     if not match:
         raise ValueError('Remote job ID is not available yet')
     cluster, schedd, pool = match.groups()
-    argv = ['condor_ssh_to_job', '-shells', '/bin/sh']
+    argv = ['condor_ssh_to_job', '-shells', '/bin/sh', '-ssh', 'ssh -tt']
     if schedd:
         argv += ['-name', schedd]
     if pool:
@@ -49,11 +49,12 @@ def resolve(state, job):
 
 def connect(site, argv):
     command = shlex.join(argv)
-    ssh = ['ssh', '-tt', '-o', 'ConnectTimeout=15', site['ssh']]
+    ssh = ['ssh', '-T', '-o', 'ConnectTimeout=15', site['ssh']]
     if site['transport'] == 'exec':
         return subprocess.call([*ssh, command])
     # Login-shell transport also supports sites with problematic exec startup.
-    # A terminal is allocated remotely; restore the local terminal on every exit.
+    # The inner SSH allocates the job terminal; the head-node shell stays
+    # noninteractive to avoid terminal-dependent startup scripts.
     proc = subprocess.Popen(ssh, stdin=subprocess.PIPE)
     original = None
     try:

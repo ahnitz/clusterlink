@@ -1,0 +1,5 @@
+
+# Clusterlink isolated acceptance test
+pegasus.transfer.worker.package=true
+pegasus.transfer.worker.package.strict=false
+pegasus.catalog.master.url=sqlite:////home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/pycbc-test/master.db

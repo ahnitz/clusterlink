@@ -1,0 +1,40 @@
+--- a/examples/search/analysis.ini
++++ b/examples/search/analysis.ini
+@@ -5,9 +5,6 @@
+ h1-channel-name = H1:LOSC-STRAIN
+ l1-channel-name = L1:LOSC-STRAIN
+ v1-channel-name = V1:LOSC-STRAIN
+-h1-frame-file = ${resolve:./H-H1_LOSC_CLN_4_V1-1186740069-3584.gwf}
+-l1-frame-file = ${resolve:./L-L1_LOSC_CLN_4_V1-1186740069-3584.gwf}
+-v1-frame-file = ${resolve:./V-V1_LOSC_CLN_4_V1-1186739813-4096.gwf}
+ 
+ [workflow-ifos]
+ h1 =
+@@ -15,7 +12,10 @@
+ v1 =
+ 
+ [workflow-datafind]
+-datafind-method = AT_RUNTIME_FAKE_DATA
++datafind-method = FROM_PREGENERATED_LCF_FILES
++datafind-pregenerated-cache-file-h1 = /home/ahnitz/gwdata/H1.cache
++datafind-pregenerated-cache-file-l1 = /home/ahnitz/gwdata/L1.cache
++datafind-pregenerated-cache-file-v1 = /home/ahnitz/gwdata/V1.cache
+ datafind-check-frames-exist = no_test
+ datafind-check-segment-gaps = no_test
+ 
+@@ -113,15 +113,12 @@
+ processing-scheme = mkl
+ 
+ [single_template-h1&plot_singles_timefreq-h1&plot_qscan-h1&inspiral-h1&calculate_psd-h1]
+-frame-files = ${workflow|h1-frame-file}
+ channel-name = ${workflow|h1-channel-name}
+ 
+ [single_template-l1&plot_singles_timefreq-l1&plot_qscan-l1&inspiral-l1&calculate_psd-l1]
+-frame-files = ${workflow|l1-frame-file}
+ channel-name = ${workflow|l1-channel-name}
+ 
+ [single_template-v1&plot_singles_timefreq-v1&plot_qscan-v1&inspiral-v1&calculate_psd-v1]
+-frame-files = ${workflow|v1-frame-file}
+ channel-name = ${workflow|v1-channel-name}
+ 
+ [calculate_psd]

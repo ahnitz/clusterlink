@@ -1,0 +1,30 @@
+--- a/examples/search/executables.ini
++++ b/examples/search/executables.ini
+@@ -66,9 +66,9 @@
+ 
+ [pegasus_profile]
+ condor|request_memory = 1000
+-condor|request_disk = 1000
+-condor|accounting_group = ligo.dev.o4.cbc.bbh.pycbcoffline
+-pycbc|primary_site = condorpool_symlink
++condor|request_disk = 8000
++condor|+BatchRuntime = 3600
++pycbc|primary_site = clusterlink
+ pycbc|submit-directory = ./
+ 
+ [pegasus_profile-condorpool_shared]
+@@ -77,11 +77,11 @@
+ 
+ [pegasus_profile-coinc]
+ ; use different site options to check that they work
+-pycbc|site = condorpool_copy
++pycbc|site = clusterlink
+ 
+ [pegasus_profile-inspiral]
+ ; use different site options to check that they work
+-pycbc|site = condorpool_shared
++pycbc|site = clusterlink
+ 
+ [pegasus_profile-results_page]
+-pycbc|site = condorpool_shared
++pycbc|site = clusterlink

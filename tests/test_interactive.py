@@ -16,7 +16,7 @@ class InteractiveTests(unittest.TestCase):
                      'GridJobId':'batch condor sandbox condor/12345//'}]):
                 site, cmd = resolve(state,'1.0')
             self.assertEqual(site['ssh'],'alias')
-            self.assertEqual(cmd,['condor_ssh_to_job','-shells','/bin/sh','12345.0'])
+            self.assertEqual(cmd,['condor_ssh_to_job','-shells','/bin/sh','-ssh','ssh -tt','12345.0'])
 
     def test_pending_job_has_clear_error(self):
         with tempfile.TemporaryDirectory() as tmp:

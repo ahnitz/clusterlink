@@ -36,7 +36,7 @@ patch('clusterlink-site.patch',old,new,site_rel)
 for path in (source/'examples/search').glob('*.ini'):
     shutil.copy2(path,work/path.name)
 p=work/'executables.ini';old=p.read_text()
-new=old.replace('condor|request_disk = 1000','condor|request_disk = 8000').replace('condor|accounting_group = ligo.dev.o4.cbc.bbh.pycbcoffline','condor|+BatchRuntime = 3600').replace('pycbc|primary_site = condorpool_symlink','pycbc|primary_site = clusterlink').replace('pycbc|site = condorpool_copy','pycbc|site = clusterlink').replace('pycbc|site = condorpool_shared','pycbc|site = clusterlink')
+new=old.replace('condor|request_disk = 1000','condor|request_disk = 1024M').replace('condor|accounting_group = ligo.dev.o4.cbc.bbh.pycbcoffline','condor|+BatchRuntime = 3600').replace('pycbc|primary_site = condorpool_symlink','pycbc|primary_site = clusterlink').replace('pycbc|site = condorpool_copy','pycbc|site = clusterlink').replace('pycbc|site = condorpool_shared','pycbc|site = clusterlink')
 p.write_text(new);patch('executables.patch',old,new,'examples/search/executables.ini')
 p=work/'analysis.ini';old=p.read_text()
 # The workflow imports every supplied cache entry into its replica catalog.

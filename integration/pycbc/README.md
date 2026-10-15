@@ -8,7 +8,8 @@ PyCBC environment is used.
 
 `clusterlink-site.patch` adds one vanilla Condor/CondorIO site. The executable
 configuration patch selects that site, removes a site-specific accounting group,
-and requests room for the unpacked environment. `properties.txt` records the
+and requests 1 GiB of working disk explicitly (`1024M`). Clusterlink adds input
+and packed/unpacked environment storage automatically. `properties.txt` records the
 local Pegasus property overrides. No search algorithm changes are intended.
 
 The user-selected source is `ahnitz/pycbc`, branch

@@ -7,7 +7,7 @@
 -condor|request_disk = 1000
 -condor|accounting_group = ligo.dev.o4.cbc.bbh.pycbcoffline
 -pycbc|primary_site = condorpool_symlink
-+condor|request_disk = 8000
++condor|request_disk = 1024M
 +condor|+BatchRuntime = 3600
 +pycbc|primary_site = clusterlink
  pycbc|submit-directory = ./

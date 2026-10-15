@@ -149,3 +149,13 @@ The independent bootstrap-test pool was stopped and restarted while source job 1
 was running remotely. Grid job 2 recovered the same remote su ID 59269500 and
 returned `CRUSH-OG-10-5-207-23` with exit zero. A second start verified immediate
 scheduler readiness and an empty queue; the auxiliary pool is now stopped.
+
+The normal and injection trigger merges contain nonempty, finite SNR datasets
+for H1/L1/V1 (429370/392573/360240 and 79120/65946/68888 triggers respectively).
+This is a sanity check, not a replacement for final workflow completion.
+A stalled fitting allocation was canceled through source hold/release and the
+same source job was selected for OSG. That exposed a nested-ClassAd formatting
+bug in hook serialization (`NumHoldsByReason`); formatting newlines are now
+collapsed while escaped string contents are preserved. Twenty-four tests pass.
+Native interactive connection diagnostics on OSG stalled in its CCB connection
+to the worker; that conditional remote limitation remains unresolved.

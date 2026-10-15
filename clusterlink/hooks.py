@@ -119,7 +119,13 @@ def prepare(ad, site, state):
 
 def serialize(ad):
     """Serialize hook updates as one assignment per physical line."""
-    return "\n".join(f"{key} = {ad.lookup(key)}" for key in ad) + "\n"
+    # ExprTree escapes string contents, but pretty-prints nested ads/lists over
+    # several lines. Collapse only those physical formatting newlines.
+    lines = []
+    for key in ad:
+        expression = str(ad.lookup(key)).replace('\n', ' ').replace('\r', ' ')
+        lines.append(f'{key} = {expression}')
+    return '\n'.join(lines) + '\n'
 
 
 def main():

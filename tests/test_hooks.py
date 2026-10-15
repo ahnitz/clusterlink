@@ -70,6 +70,16 @@ class HookTests(unittest.TestCase):
             self.assertIn('transfer_output_files = nested/result', out['ClusterlinkRemoteSubmitArgs'])
             self.assertEqual(out['TransferOutput'], 'result')
 
+    def test_hold_counters_and_nested_lists_survive_hook_serialization(self):
+        ad = classad2.ClassAd({'NumHoldsByReason': classad2.ClassAd({'UserRequest': 1}),
+             'Items': [classad2.ClassAd({'message': 'line one\nline two'}), 2]})
+        wire = serialize(ad)
+        self.assertEqual(len(wire.splitlines()), 2)
+        decoded = classad2.parseOne('[' + ';'.join(wire.splitlines()) + ']',
+                                    parser=classad2.Parser.New)
+        self.assertEqual(decoded['NumHoldsByReason']['UserRequest'], 1)
+        self.assertEqual(decoded['Items'][0]['message'], 'line one\nline two')
+
     def test_prepared_convenience_submission_is_unchanged(self):
         ad = classad2.ClassAd({'ClusterlinkPrepared': True, 'Cmd': 'launch.sh'})
         self.assertIs(prepare(ad, {}, Path('/unused')), ad)

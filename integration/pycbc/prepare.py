@@ -3,6 +3,7 @@ import argparse
 import difflib
 from pathlib import Path
 import shutil
+from urllib.parse import urlparse, unquote
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--source', type=Path, required=True)
@@ -53,6 +54,7 @@ start=int(re.search(r'^start-time\s*=\s*(\d+)',old,re.M).group(1))
 end=int(re.search(r'^end-time\s*=\s*(\d+)',old,re.M).group(1))
 selected=work/'frame-cache'
 selected.mkdir(exist_ok=True)
+followup_frames = {}
 for ifo in ['H1','L1','V1']:
     lines=[]
     for line in (caches/(ifo+'.cache')).read_text().splitlines():
@@ -62,9 +64,16 @@ for ifo in ['H1','L1','V1']:
     if not lines:
         raise ValueError('Cache has no entries for '+ifo+' in the test interval')
     (selected/(ifo+'.cache')).write_text('\n'.join(lines)+'\n')
+    followup_frames[ifo] = [unquote(urlparse(line.split()[4]).path) for line in lines]
 
 new='\n'.join(line for line in old.splitlines() if '-frame-file =' not in line and not line.startswith('frame-files ='))+'\n'
 new=new.replace('datafind-method = AT_RUNTIME_FAKE_DATA','datafind-method = FROM_PREGENERATED_LCF_FILES\n'+'\n'.join(f'datafind-pregenerated-cache-file-{ifo.lower()} = {selected}/{ifo}.cache' for ifo in ['H1','L1','V1']))
+# These generators do not call workflow.datafind. Declare their inputs using
+# the same selected cache, so Pegasus stages them normally through CondorIO.
+for ifo, files in followup_frames.items():
+    sections = '&'.join(f'{name}-{ifo.lower()}' for name in
+                        ['single_template', 'plot_singles_timefreq', 'plot_qscan'])
+    new += '\n['+sections+']\nframe-files = '+' '.join(files)+'\n'
 p.write_text(new);patch('analysis.patch',old,new,'examples/search/analysis.ini')
 props=installed/'pycbc/workflow/pegasus_files/pegasus-properties.conf'
 old=(source/'pycbc/workflow/pegasus_files/pegasus-properties.conf').read_text()

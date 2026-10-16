@@ -23,6 +23,9 @@ Its native HDF5 frame reader successfully reads all three supplied caches.
 `FROM_PREGENERATED_LCF_FILES` with `/home/ahnitz/gwdata/{H1,L1,V1}.cache`.
 PyCBC selects the required frame files and Pegasus stages them through CondorIO.
 Shared data is read only; nothing is converted or modified there.
+The follow-up generators do not call the main workflow's datafind machinery.
+Their `frame-files` inputs are therefore derived from the same selected cache
+records in `prepare.py`; Pegasus stages these as ordinary declared inputs.
 
 Reapply the site and configuration adaptations with:
 

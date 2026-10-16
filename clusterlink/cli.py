@@ -166,9 +166,11 @@ def main():
     p.add_argument("--reserve-gb", type=float, default=1)
     p.add_argument("--max-idle", type=int, default=2)
     p.add_argument("--max-jobs", type=int, default=10)
-    p = sub.add_parser("site", help="Enable or disable new routing without deleting enrollment")
-    p.add_argument("action", choices=["enable", "disable"])
+    p = sub.add_parser("site", help="Control routing without reinstalling remote helpers")
+    p.add_argument("action", choices=["enable", "disable", "limits"])
     p.add_argument("name")
+    p.add_argument('--max-jobs', type=int)
+    p.add_argument('--max-idle', type=int)
     p = sub.add_parser("pack")
     p.add_argument("--env")
     p = sub.add_parser("cache")
@@ -214,13 +216,26 @@ def main():
             sites = json.loads((state / "sites.json").read_text())
             if args.name not in sites:
                 raise ValueError("Unknown enrolled site: " + args.name)
-            sites[args.name]["enabled"] = args.action == "enable"
+            if args.action == 'limits':
+                site = sites[args.name]
+                maximum = args.max_jobs if args.max_jobs is not None else site['max_jobs']
+                idle = args.max_idle if args.max_idle is not None else site['max_idle']
+                if not 0 < idle <= maximum:
+                    raise ValueError('Require 0 < max-idle <= max-jobs')
+                site.update(max_jobs=maximum, max_idle=idle)
+            else:
+                if args.max_jobs is not None or args.max_idle is not None:
+                    raise ValueError('Use site limits to change queue limits')
+                sites[args.name]["enabled"] = args.action == "enable"
             save(state / "sites.json", sites)
             from . import pool
             pool.configure(state)
             if pool.running(state):
                 subprocess.run(["condor_reconfig"], env=pool.environment(state), check=True)
-            print(args.name + (" enabled for new jobs" if args.action == "enable" else " disabled for new jobs; existing jobs remain tracked"))
+            if args.action == 'limits':
+                print(f'{args.name}: max-jobs={maximum}, max-idle={idle}; existing jobs remain tracked')
+            else:
+                print(args.name + (" enabled for new jobs" if args.action == "enable" else " disabled for new jobs; existing jobs remain tracked"))
         elif args.command == "enroll":
             enroll(args, state)
         elif args.command == "pack":

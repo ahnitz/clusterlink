@@ -99,6 +99,15 @@ preserves its enrollment, cache, and tracking of accepted jobs; it does not canc
 or migrate them. Enroll an alternate scheduler under a new site name. A shared
 home directory does not mean two login hosts share a scheduler queue.
 
+Adjust a site's queue limits without reinstalling its helpers:
+
+```bash
+clusterlink site limits first --max-jobs 20 --max-idle 10
+```
+
+The limits control native Job Router submissions, not scheduler priority or a
+storage quota. Lowering a limit preserves already accepted jobs.
+
 Enrollment automatically tries login-shell and command-shell transport. SSH
 allows nonprompting keyboard-interactive authentication after public-key
 acceptance, as required by some sites. Actual password/MFA prompts currently fail;

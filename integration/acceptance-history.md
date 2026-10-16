@@ -179,3 +179,12 @@ without input-transfer bytes, CPU, or memory usage for roughly ten minutes; nati
 output access timed out. Source 277 was held, its routed job 287 was removed,
 and then it was released with su selected. This is an explicit test recovery;
 automatic cross-site failover is not implemented.
+
+### Follow-up tail allocation retry
+
+Source 775 / grid 779 / su2 remote 49376828 remained assigned for over
+25 minutes with NumJobStarts=0 and zero reported CPU. Input bytes had reached
+the worker. The source was held and targeted to osg. GridManager canceled the
+old allocation; remote queue absence and history JobStatus=3 were confirmed
+before source 775 was released. This is an explicit reconciled intervention,
+not an automatic stalled-worker detector or a claim that no transfer occurred.

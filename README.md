@@ -39,29 +39,15 @@ compute node. No shared filesystem or container runtime is assumed for this path
 
 ## Install
 
-From your own activated Conda environment:
+From your activated project Conda environment:
 
 ```bash
-git clone git@github.com:ahnitz/clusterlink.git
-cd clusterlink
-python -m pip install .
-export CLUSTERLINK_STATE="$PWD/local/clusterlink"
+python -m pip install git+https://github.com/ahnitz/clusterlink.git
 ```
 
-Alternatively, create a project-local development environment:
-
-```bash
-mkdir -p local/pkgs local/tmp
-CONDA_PKGS_DIRS="$PWD/local/pkgs" TMPDIR="$PWD/local/tmp" \
-  conda env create --prefix "$PWD/local/env" --file environment.yml
-conda activate "$PWD/local/env"
-python -m pip install .
-export CLUSTERLINK_STATE="$PWD/local/clusterlink"
-```
-
-Use an absolute state path, including in later shells. Without this variable or
-`--state`, the current default is `./local/clusterlink` relative to your directory.
-Do not put state inside the Conda environment being bundled.
+For this prototype, run commands from your project root. State defaults to
+`local/clusterlink` there. Keep it outside the environment being bundled.
+Project initialization and parent-directory discovery are not implemented yet.
 
 ## Enroll and start
 
@@ -85,7 +71,7 @@ private configuration:
 ```bash
 clusterlink enroll second --ssh another-cluster --cache-gb 5 --storage-gb 10
 clusterlink pool configure
-CONDOR_CONFIG="$CLUSTERLINK_STATE/condor.config" condor_reconfig
+clusterlink site enable second
 ```
 
 Temporarily stop new jobs going to a site without losing its existing job IDs:
@@ -165,7 +151,7 @@ full package-integrity check, and master presence is not a scheduler-health chec
 
 `--remote` also flushes completed-job cache releases and reports each unreachable
 site independently. The default works offline and does not create missing state.
-Status uses the same `--state` / `CLUSTERLINK_STATE` selection as other commands;
+Status uses the same state directory as other commands;
 project-root discovery is not implemented yet. The previous cache-only JSON-lines
 status output is replaced by this overview; scripts should use `--json`.
 
@@ -216,12 +202,12 @@ clusterlink pool stop
 ```
 
 Job directories contain the generated submit file, launcher, event log, stdout,
-stderr, and returned files. Daemon logs are under `$CLUSTERLINK_STATE/log`.
-For native Condor commands, select this pool explicitly:
+stderr, and returned files. Daemon logs are under `local/clusterlink/log`.
+After the activation step above, use native Condor commands directly:
 
 ```bash
-CONDOR_CONFIG="$CLUSTERLINK_STATE/condor.config" condor_q
-CONDOR_CONFIG="$CLUSTERLINK_STATE/condor.config" condor_rm JOB_ID
+condor_q
+condor_rm JOB_ID
 ```
 
 Stopping the pool does not remove remote jobs, caches, or enrollment. Cancellation

@@ -59,7 +59,22 @@ A new project, `local/pycbc-acceptance` (ID
 `6833f52e85db4427bb924011f218fc76`), was initialized and enrolled using the normal
 CLI, built its own SIF, and submitted once at 09:11:33 local time on 2026-10-16.
 The hook capture cap and native retry/timeout settings were present before
-submission. It is running with zero operator interventions so far.
+submission. It is running with zero operator interventions so far. All six inspiral jobs
+succeeded, and staged scientific outputs passed validation (434 templates,
+68 injections, six finite nonempty trigger datasets). The nine singles DAGs and
+both foreground/background DAGs have completed. Native retries recovered from
+SU scheduler connectivity/storage failures; the injection follow-up is still
+running. These are not yet full acceptance results.
+
+The SU login node's root filesystem became full while home storage retained
+about 5.4 TB free. Investigation found its older BLAHP binary honors `GAHP_TEMP`
+but not the newer `blah_temp_dir`/`TMPDIR` controls. A fix explicitly setting
+`GAHP_TEMP` and the project BLAHP config path is prepared separately in
+`local/storage-fix` to avoid changing the active acceptance runtime. Fifty tests
+pass there, including an actual native status-helper regression. Two isolated
+SU grid probes exited zero using a custom `--remote-dir`, and the native status
+cache was observed inside that directory. The fix will be integrated after the
+active run; it is not yet part of the tracked runtime.
 No successful unattended full run is claimed yet.
 
 The test launcher also needed a Bash invocation fix before the first submission;

@@ -188,3 +188,15 @@ the worker. The source was held and targeted to osg. GridManager canceled the
 old allocation; remote queue absence and history JobStatus=3 were confirmed
 before source 775 was released. This is an explicit reconciled intervention,
 not an automatic stalled-worker detector or a claim that no transfer occurred.
+
+Six foreground-tail sources (1201, 1204, 1208, 1211, 1258, 1269) were held
+and explicitly targeted to su after roughly twenty minutes in pre-execution
+allocations. GridManager removed their routed copies. OSG queue queries showed
+16043218–16043221 in removed state (3), and 16043224 completed (4); su2
+49378536 was absent from its queue with removed state in history. The terminal
+states were confirmed before release; a subsequent OSG history query timed out,
+so queue absence there was not independently established. Source 1269 retained
+its original Requirements with the previously stalled worker excluded. These
+are operator-directed retries, not automatic cross-site failover. The five OSG
+sources were released after the terminal-state check, and 1269 after the su2
+history check. All 39 package regression tests still pass.

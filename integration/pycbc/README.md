@@ -1,4 +1,4 @@
-# Isolated PyCBC acceptance test (in progress)
+# Isolated PyCBC acceptance test
 
 The upstream `examples/search` workflow is used, including its template-bank
 and ranking-statistic generators. The environment was installed from an isolated
@@ -35,8 +35,9 @@ python integration/pycbc/prepare.py --source local/pycbc-source \
   --cache-root /home/ahnitz/gwdata
 ```
 
-The complete workflow has been planned and submitted. It has not yet passed.
-See [STATUS.md](../../STATUS.md) for verified stages, alternate-host recovery, and remaining validation.
+The complete workflow passed: main 252/252, all 12 follow-up workflows,
+finalization 3/3, and root DAG exit zero. The scientific integrity validator passed.
+See [STATUS.md](../../STATUS.md) for verified stages, alternate-host recovery, and final validation.
 
 For a fresh run after installing the isolated dependencies and applying the
 adaptations, the generation/submission sequence is below. Do not run this over
@@ -73,11 +74,11 @@ The older su workers cannot use those binaries. Keep the same cryptography
 version but select its `manylinux_2_28_x86_64` wheel; install SQLAlchemy 1.3.24
 with `DISABLE_SQLALCHEMY_CEXT=1` to use its Python fallback. These change package
 builds, not PyCBC algorithms. The initial failed run is retained for diagnosis;
-completion is still pending.
+the resumed workflow completed successfully.
 
 During the run, an external process repeatedly renamed ncurses aliases to
 `*_CaseConflict`, breaking the live local environment's Conda inventory. The
-remaining workflow explicitly selects the previously validated immutable archive
+completed workflow explicitly selected the previously validated immutable archive
 `4bf0900e4ab35c9b0a7e8e4aced2f7b3be5260ea367542fc42434c0efdb987ce`
 using `clusterlink activate --env local/pycbc-env --artifact ARCHIVE`. This is an
 explicit snapshot choice, not an integrity-check bypass or automatic fallback.

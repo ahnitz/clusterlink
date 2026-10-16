@@ -206,3 +206,16 @@ OG-NODE-10-5-255-134 worker seen through su2. After another pre-execution stall,
 it was held again and given a test-only worker exclusion. Remote queue absence
 and removed state (3) in history were confirmed before release. The other five
 foreground-tail retries completed on su; no application changes were needed.
+
+### Completed PyCBC acceptance
+
+Root DAG 1167 exited zero after main 252/252, all 12 follow-up child workflows,
+and finalization 3/3 completed. The local queue drained. Scientific integrity
+validation passed with 434 templates, 68 injections, and finite nonempty trigger
+SNRs for all three detectors in both branches. HTML assembly produced 166 HTML
+files and 334 PNGs; the only unresolved local reference in 4,483 checks was the
+upstream PEGASUS_DASHBOARD_URL placeholder (no dashboard configured). Compact
+numeric evidence is saved in `pycbc/acceptance.json`; full outputs remain local.
+The completed run used the explicit validated Conda snapshot after external
+CaseConflict renames damaged live environment inventory. Fresh automatic packing
+of that environment remains to be retested after sync exclusion and repair.

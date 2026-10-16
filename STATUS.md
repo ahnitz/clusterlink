@@ -1,10 +1,12 @@
 # Clusterlink acceptance status — 2026-10-15
 
-The package works across both enrolled HTCondor sites. The complete PyCBC
-acceptance workflow is **not finished**: 244/252 main nodes are complete, with
-follow-up workflows and final HTML assembly still pending.
+The isolated PyCBC acceptance workflow **completed successfully** across su,
+osg, and the newly enrolled sugwg-login2 host (site su2). The main DAG completed
+252/252 nodes, all 12 follow-up workflows completed, finalization completed 3/3,
+and the root DAG exited zero. This is a validated development prototype, not an
+unattended clean-run claim: the interventions and remaining limits are below.
 
-## Current recovery
+## Completed acceptance run
 
 The suggested `sugwg-login2` host was enrolled as `su2` through the normal
 CLI with a 5 GB cache and 10 GB owned-storage budget. Its independent scheduler
@@ -17,14 +19,20 @@ connections, then recovered; the package's existing nonprompting login path work
 again and deferred cache releases drained successfully. Existing native jobs
 were tracked to completion/removal; no remote identity was discarded.
 
-The workflow resumed as root DAG 1167 from rescue checkpoint 004. All 305
-injection follow-up nodes have now completed successfully, as have all nine
-singles child workflows. Both corrected foreground generators passed and their
-100-node and 103-node child workflows are running without failures. The main DAG
-has 244/252 nodes complete. The foreground workflows were generated normally from
-the repaired configuration: frame inputs are declared and staged through CondorIO,
-and submit files request the corrected 1024 MB of working disk. Syracuse queue
-limits are 20 total / 10 idle jobs per site, changed through `site limits`.
+The workflow resumed as root DAG 1167 from rescue checkpoint 004 and completed
+at approximately 22:29 local time. Child workflow totals were 305 injection
+follow-up nodes, 100 foreground nodes, 103 background-follow-up nodes, and nine
+one-node singles workflows. Foreground workflows were generated normally from
+the repaired configuration, with declared frame inputs staged through CondorIO
+and 1024 MB of requested working disk. Syracuse queue limits remain 20 total /
+10 idle jobs per site, changed through `site limits`.
+
+The final validator reports `workflow_complete: true`. The generated HTML tree
+contains 166 HTML files and 334 PNGs. Of 4,483 local references checked, only the
+upstream `PEGASUS_DASHBOARD_URL` placeholder is unresolved; no dashboard service
+was configured. Successful remote attempt counts are su 236, osg 179, and su2 155.
+These count execution attempts, not unique workflow nodes; failed and canceled
+attempts are retained in local history.
 
 The injection tail was checkpointed only after confirming the canceled OSG
 allocation 16043206 absent from the queue and JobStatus=3 in history. Its next
@@ -58,7 +66,7 @@ Persistent head-node helpers use roughly 17–20 MiB RSS per host. During the
 concurrent follow-up workload, summed RSS including temporary native submission
 and status processes was about 75 MiB on su, 20 MiB on osg, and 16 MiB on su2.
 This sums process RSS (including shared pages), and is not a measured peak.
-Recent owned-storage snapshots were 3.12 GB on su, 1.88 GB on su2, and
+Final owned-storage snapshots were 2.63 GB on su, 0.69 GB on su2, and
 2.36 GB on osg; cached environments account for 2.56 GB, 0.68 GB, and 2.34 GB
 respectively. These are snapshots, not peak or quota guarantees.
 
@@ -69,7 +77,8 @@ branch at `6c67f3fd2ee6e347f44be081ba150f420219ebfa`, with real frame-cache
 inputs from `/home/ahnitz/gwdata`. All six initial inspiral jobs passed.
 The merged outputs contain 434 templates, 68 injections, and nonempty finite
 trigger SNRs for H1/L1/V1 in both branches. Report plotting jobs have returned
-nonempty assets. This does not replace full root-DAG completion.
+nonempty assets. Root-DAG completion and the scientific integrity validator both passed.
+These are sanity checks, not a scientific benchmark comparison.
 
 See [PyCBC setup and validation](integration/pycbc/README.md) for patches and validation commands.
 Workflow generators and final HTML assembly use the isolated local environment;
@@ -79,7 +88,7 @@ Conda-managed ncurses aliases were renamed to `*_CaseConflict`. A running
 Synology Drive daemon was identified locally, and a fresh package-inventory check
 still reports three missing aliases. Excluding project `local/` from sync has
 been requested so ordinary automatic packing can be retested after repair.
-The remaining test explicitly selects a previously validated immutable snapshot;
+The completed test explicitly selected a previously validated immutable snapshot;
 automatic packaging does not bypass integrity checks or silently reuse old archives.
 Two glibc-incompatible dependency builds were replaced with compatible builds
 of the same versions before that snapshot was created.
@@ -92,6 +101,10 @@ of the same versions before that snapshot was created.
 - Two allocations on the same OSG worker stalled before transferring inputs.
   They were explicitly canceled and retried; excluding that worker let the second
   retry succeed. A separate earlier fitting allocation was also explicitly retried.
+- Foreground tail allocations also needed reconciled retries through su, including
+  exclusion of a repeatedly stalled worker. These were explicit operator actions.
+- One older OSG preparation lease remains conservatively pinned; completed PyCBC
+  leases drained. Interrupted preparation lease recovery is not automated.
 - Remote HTCondor is tested. Slurm route generation exists, but no Slurm cluster
   was supplied, and cached delivery remains Condor-only.
 - Interactive forwarding resolves job IDs. A command succeeded in one test, but
@@ -107,7 +120,7 @@ Detailed chronological evidence is in
 [acceptance history](integration/acceptance-history.md). Local raw logs and outputs
 are preserved under ignored `local/`; environments and credentials are not committed.
 
-## Alternate-host recovery updates
+## Historical alternate-host recovery
 
 The resumed workflow reached 161 completed main nodes. Two local follow-up
 generators produced valid child DAX files but their adapted wrappers omitted
@@ -128,7 +141,7 @@ there also passed. All nine singles child DAGs completed. The main DAG reached
 197 completed nodes; the two corrected foreground generators still need a
 checkpoint retry. Their corrected log format passes Pegasus's exit-code checker.
 
-## Busy-scheduler submission recovery
+## Historical busy-scheduler submission recovery
 
 A su2 submission (source 863 / grid 869) hit BLAHP's 30-second silent-command
 timeout. Its unique sandbox identity was absent from both the remote queue and

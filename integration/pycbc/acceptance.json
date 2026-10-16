@@ -1,0 +1,113 @@
+{
+  "source_branch": "firinspiral3-multidet-asym",
+  "source_commit": "6c67f3fd2ee6e347f44be081ba150f420219ebfa",
+  "root_dag_exit": 0,
+  "main_nodes": 252,
+  "followup_nodes": {
+    "injections": 305,
+    "foreground": 100,
+    "background": 103,
+    "singles": 9
+  },
+  "finalization_nodes": 3,
+  "scientific_outputs": {
+    "workflow_complete": true,
+    "triggers": [
+      {
+        "category": "full_data",
+        "ifo": "H1",
+        "count": 429370,
+        "max_snr": 9.695311546325684
+      },
+      {
+        "category": "full_data",
+        "ifo": "L1",
+        "count": 392573,
+        "max_snr": 13.973575592041016
+      },
+      {
+        "category": "full_data",
+        "ifo": "V1",
+        "count": 360240,
+        "max_snr": 12.578028678894043
+      },
+      {
+        "category": "BBH_coinc",
+        "ifo": "H1",
+        "count": 79120,
+        "max_snr": 67.83955383300781
+      },
+      {
+        "category": "BBH_coinc",
+        "ifo": "L1",
+        "count": 65946,
+        "max_snr": 115.25776672363281
+      },
+      {
+        "category": "BBH_coinc",
+        "ifo": "V1",
+        "count": 68888,
+        "max_snr": 28.809917449951172
+      }
+    ],
+    "templates": 434,
+    "injections": 68
+  },
+  "html": {
+    "index_bytes": 128545,
+    "html_files": 166,
+    "png_files": 334,
+    "local_references_checked": 4483,
+    "missing_local_references": [
+      "9._workflow/PEGASUS_DASHBOARD_URL"
+    ]
+  },
+  "remote_attempts": [
+    {
+      "site": "osg",
+      "exit_code": "0",
+      "attempts": 179
+    },
+    {
+      "site": "osg",
+      "exit_code": "1",
+      "attempts": 3
+    },
+    {
+      "site": "osg",
+      "exit_code": "undefined",
+      "attempts": 9
+    },
+    {
+      "site": "su",
+      "exit_code": "0",
+      "attempts": 236
+    },
+    {
+      "site": "su",
+      "exit_code": "1",
+      "attempts": 12
+    },
+    {
+      "site": "su",
+      "exit_code": "2",
+      "attempts": 4
+    },
+    {
+      "site": "su",
+      "exit_code": "undefined",
+      "attempts": 13
+    },
+    {
+      "site": "su2",
+      "exit_code": "0",
+      "attempts": 155
+    },
+    {
+      "site": "su2",
+      "exit_code": "undefined",
+      "attempts": 4
+    }
+  ],
+  "qualification": "Resumed acceptance run with explicit operator retries, configuration repairs, and a validated immutable Conda snapshot; see STATUS.md and acceptance-history.md."
+}

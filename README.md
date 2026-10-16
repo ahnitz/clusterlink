@@ -6,7 +6,8 @@ HTCondor job routing, and file staging.
 **Development prototype:** small scientific jobs have completed through two
 remote HTCondor submission hosts, including input/output transfer and execution
 from cached environment bundles. A two-stage Pegasus CondorIO workflow also completed across both sites.
-The isolated PyCBC acceptance test is in progress. See [STATUS.md](STATUS.md) for evidence and gaps.
+The isolated PyCBC acceptance workflow completed across su, osg, and sugwg-login2,
+with documented configuration fixes and explicit retries. See [STATUS.md](STATUS.md) for evidence and gaps.
 
 ## What it does
 
@@ -232,7 +233,8 @@ Condor CCB negotiation; universal interactive access is not verified.
   and a five-minute runtime request. Override these with `--cpus`, `--memory-mb`,
   `--disk-mb`, and `--runtime` (seconds).
 - Pegasus CondorIO completed all 13 nodes of the two-stage example, with compute
-  jobs on different clusters. The isolated PyCBC search test remains in progress.
+  jobs on different clusters. The isolated PyCBC search test completed, including follow-ups and HTML assembly;
+  see STATUS.md for interventions and portability limits.
 - A transferred private Apptainer runtime successfully ran a SIF with its own
   glibc on both test clusters. OSG needed `--unsquash` because FUSE was unavailable.
   This still requires permitted user namespaces. Automatic Conda-to-SIF packaging

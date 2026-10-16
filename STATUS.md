@@ -54,7 +54,10 @@ archives immutable and avoiding repeated cross-cache checksum reads.
   transfer hold. Cache budget/lease/eviction/corruption behavior has unit coverage.
 - All 39 unit tests pass. The distributable wheel builds successfully.
 
-The head-node helper RSS snapshot was about 18 MiB on su and 20 MiB on osg.
+Persistent head-node helpers use roughly 17–20 MiB RSS per host. During the
+concurrent follow-up workload, summed RSS including temporary native submission
+and status processes was about 75 MiB on su, 20 MiB on osg, and 16 MiB on su2.
+This sums process RSS (including shared pages), and is not a measured peak.
 Recent owned-storage snapshots were 3.12 GB on su, 1.88 GB on su2, and
 2.36 GB on osg; cached environments account for 2.56 GB, 0.68 GB, and 2.34 GB
 respectively. These are snapshots, not peak or quota guarantees.

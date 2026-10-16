@@ -48,9 +48,9 @@ def prepare(ad, site, state):
     with (state / '.pack.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         selected = ad.get('ClusterlinkArtifact')
-        if selected is not None:
+        if selected is not None and selected != classad2.Value.Undefined:
             if not isinstance(selected, str) or not Path(selected).is_file():
-                raise ValueError('ClusterlinkArtifact must name an existing conda-pack archive')
+                raise ValueError('ClusterlinkArtifact must name an existing environment bundle')
             artifact = Path(selected).resolve()
         else:
             artifact = bundle(prefix, state, backend=ad.get('ClusterlinkBackend', 'conda'), base=ad.get('ClusterlinkContainerBase'))

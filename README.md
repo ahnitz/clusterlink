@@ -20,11 +20,13 @@ provided by Clusterlink, without administrator installation. Start with your pro
 ```bash
 python -m pip install git+https://github.com/ahnitz/clusterlink.git
 cd my-project
-clusterlink init --env /absolute/path/to/your/conda-env
+clusterlink init --env my-analysis-env
 clusterlink enroll su --ssh su --cache-gb 20 --storage-gb 100
 ```
 
-Replace the environment path, SSH alias, and budgets with your own. Budgets are
+Replace the Conda environment name, SSH alias, and budgets with your own.
+`--env` also accepts an explicit environment path. Names resolve through your
+Conda installation and are recorded as absolute paths. Budgets are
 in decimal GB. Use another `enroll` command for each additional cluster.
 Enrollment installs missing helpers in your remote home directory and configures
 the project automatically. SSH access must work without interactive prompts.

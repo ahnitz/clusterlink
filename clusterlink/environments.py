@@ -151,6 +151,7 @@ def launcher(command, archive='environment.tar.gz', source_prefix=None, staged_s
         '#!/bin/bash\nset -euo pipefail\n'
         'export CLUSTERLINK_ENV=/opt/clusterlink/env\n'
         'export CONDA_PREFIX="$CLUSTERLINK_ENV"\n'
+        'export PEGASUS_PYTHON="$CLUSTERLINK_ENV/bin/python"\n'
         'export PATH="$CLUSTERLINK_ENV/bin:$PATH"\n'
         'unset PYTHONHOME PYTHONPATH\nexport PYTHONNOUSERSITE=1\n'
         + remap + command + ' "$@"\nCLUSTERLINK_INNER\n'

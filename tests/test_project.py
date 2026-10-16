@@ -47,3 +47,16 @@ class ProjectTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             with patch('pathlib.Path.cwd',return_value=Path(tmp)),self.assertRaises(ValueError):project.initialize(Path(tmp)/'missing')
             self.assertFalse((Path(tmp)/'.clusterlink').exists())
+
+    def test_registered_name_base_and_ambiguity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);base=root/'conda';first=base/'envs/science';second=root/'other/science'
+            for p in (base,first,second):(p/'conda-meta').mkdir(parents=True,exist_ok=True)
+            info={'root_prefix':str(base),'envs_dirs':[str(first.parent)],'envs':[str(base),str(first),str(second)]}
+            with patch('clusterlink.project.conda_executable',return_value='/conda'),patch('clusterlink.project.subprocess.check_output',return_value=json.dumps(info)):
+                self.assertEqual(project.resolve_environment('science'),first)
+                self.assertEqual(project.resolve_environment('base'),base)
+                with self.assertRaises(ValueError):project.resolve_environment('missing')
+            info['envs_dirs'].append(str(second.parent))
+            with patch('clusterlink.project.conda_executable',return_value='/conda'),patch('clusterlink.project.subprocess.check_output',return_value=json.dumps(info)),self.assertRaisesRegex(ValueError,'ambiguous'):
+                project.resolve_environment('science')

@@ -203,6 +203,8 @@ def main():
     args = parser.parse_args()
     try:
         from . import project
+        if getattr(args, 'env', None):
+            args.env = str(project.resolve_environment(args.env))
         if args.command == 'init':
             if args.state:
                 raise ValueError('init creates .clusterlink in the current project; do not pass --state')

@@ -29,9 +29,37 @@ def discover(explicit=None):
     raise ValueError('No Clusterlink project found; run clusterlink init --env PREFIX')
 
 
+def conda_executable():
+    executable = os.environ.get('CONDA_EXE') or shutil.which('conda')
+    if not executable or not Path(executable).is_file():
+        raise ValueError('Conda is not available; launch Clusterlink from a shell with Conda installed')
+    return executable
+
+
+def resolve_environment(value):
+    value = str(value)
+    path = Path(value).expanduser()
+    if (path / 'conda-meta').is_dir():
+        return path.resolve()
+    if path.is_absolute() or '/' in str(value) or str(value).startswith('.'):
+        raise ValueError('The selected path is not a Conda environment: ' + str(value))
+    info = json.loads(subprocess.check_output([conda_executable(), 'info', '--json'], text=True))
+    if value == 'base':
+        candidates = [Path(info['root_prefix'])] if info.get('root_prefix') else []
+    else:
+        directories = {Path(p).resolve() for p in info.get('envs_dirs', [])}
+        candidates = [Path(p) for p in info.get('envs', [])
+                      if Path(p).name == value and (not directories or Path(p).resolve().parent in directories)]
+    candidates = sorted({p.resolve() for p in candidates if (p / 'conda-meta').is_dir()})
+    if len(candidates) != 1:
+        reason = 'not found' if not candidates else 'ambiguous'
+        raise ValueError(f'Conda environment name {value!r} is {reason}; use an explicit path')
+    return candidates[0]
+
+
 def initialize(prefix, backend='sif', base=None):
     from .cli import save
-    prefix = Path(prefix).expanduser().resolve()
+    prefix = resolve_environment(prefix)
     if not (prefix / 'conda-meta').is_dir():
         raise ValueError('The selected path is not a Conda environment')
     state = Path.cwd().resolve() / '.clusterlink'
@@ -63,9 +91,7 @@ def activate(state):
     prefix = Path(selection['prefix'])
     if not (prefix / 'conda-meta').is_dir():
         raise ValueError('Recorded Conda environment is missing: ' + str(prefix))
-    conda = os.environ.get('CONDA_EXE') or shutil.which('conda')
-    if not conda or not Path(conda).is_file():
-        raise ValueError('Conda is not available; launch Clusterlink from a shell with Conda installed')
+    conda = conda_executable()
     if selection.get('backend') == 'sif':
         from .environments import bundle
         import fcntl

@@ -63,7 +63,9 @@ the upstream unset dashboard placeholder is reported separately.
 - The remote HTCondor jobs have a native one-hour running-state limit, including
   startup, supplied through `+BatchExtraSubmitArgs`; DAGMan owns retries. The
   local Pegasus policy removes jobs held for more than two minutes, allowing
-  DAGMan to retry instead of waiting the upstream default twelve hours. The
+  native retry/rerouting instead of waiting the upstream default twelve hours.
+  In the SSH batch route, Job Router can requeue a source when its routed job is
+  removed; ordinary failed payload exits are retried by DAGMan. The
   bare `batch_extra_submit_args` submit keyword is grid-universe-specific, so
   routed vanilla jobs use its ClassAd attribute explicitly.
 - Workflow generators and final HTML assembly use local-universe jobs in the

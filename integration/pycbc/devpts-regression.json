@@ -1,0 +1,19 @@
+{
+  "worker_requirement": "TARGET.Machine == \"nal-005-docker\"",
+  "local_source_job": 73,
+  "remote_condor_job": 16043293,
+  "exit_code": 0,
+  "result": {
+    "site": "osg",
+    "glibc": [
+      "glibc",
+      "2.42"
+    ],
+    "prefix": "/opt/clusterlink/env",
+    "pycbc": "0.0a1",
+    "strlcpy": "container-glibc",
+    "fft_max_error": 1.5543122344752192e-15,
+    "matched_filter_peak": 2.778959262201222
+  },
+  "stderr": "INFO:    Converting SIF file to temporary sandbox...\nPyCBC.libutils: pkg-config call failed, setting NO_PKGCONFIG=1\nINFO:    Cleaning up image...\n"
+}

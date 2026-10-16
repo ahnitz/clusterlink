@@ -11,9 +11,11 @@ The failed run was canceled and its logs retained; it is not an acceptance pass.
 
 The launcher now disables devpts in its extracted private runtime configuration,
 covering both the internal extractor and payload. This changes no host settings.
-A general OSG regression probe passed; a probe pinned to the affected worker
-is still running before a second fresh project,
-`local/pycbc-clean-run2`, is submitted. No successful unattended run is claimed yet.
+General OSG and affected-worker regression probes passed. The targeted job
+(local 73, remote 16043293) returned valid PyCBC numerical results with exit zero
+on `nal-005-docker`. A second fresh project, `local/pycbc-clean-run2`, is now
+generating its full workflow, with two native DAGMan retries configured before
+submission. No successful unattended full run is claimed yet.
 
 The test launcher also needed a Bash invocation fix before the first submission;
 the unused preflight plan is retained separately and submitted no jobs.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Set up a Clusterlink project"
+  short_description: "Guide project setup and verify remote scientific jobs"
+  default_prompt: "Use $clusterlink-project to set up my scientific project and verify a small remote job."

@@ -109,5 +109,13 @@ Logs live in `.clusterlink/log`. Use `clusterlink --help` for other controls.
 - `ssh_to_job` resolves remote jobs, but interactive access depends on the remote
   pool allowing worker connections.
 
+## Help for agents
+
+Agents working from this checkout can use the
+[Clusterlink project skill](.agents/skills/clusterlink-project/SKILL.md) to gather
+project details, enroll clusters, and verify jobs. [AGENTS.md](AGENTS.md) points
+agents to it; compatible skill loaders can select it automatically or invoke it
+as `$clusterlink-project`.
+
 [Validation evidence](STATUS.md) · [Test plan](TESTING.md) ·
 [HTCondor Job Router](https://htcondor.readthedocs.io/en/main/grid-computing/job-router.html)

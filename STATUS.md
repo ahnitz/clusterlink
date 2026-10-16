@@ -1,7 +1,7 @@
 # Clusterlink acceptance status — 2026-10-15
 
 The package works across both enrolled HTCondor sites. The complete PyCBC
-acceptance workflow is **not finished**: 236/252 main nodes are complete, with
+acceptance workflow is **not finished**: 244/252 main nodes are complete, with
 follow-up workflows and final HTML assembly still pending.
 
 ## Current recovery
@@ -17,14 +17,14 @@ connections, then recovered; the package's existing nonprompting login path work
 again and deferred cache releases drained successfully. Existing native jobs
 were tracked to completion/removal; no remote identity was discarded.
 
-The workflow resumed as root DAG 1167 from rescue checkpoint 004, preserving
-236 main nodes and 298/305 injection follow-up nodes. Both corrected foreground
-generators passed; their child DAGs contain 100 and 103 nodes and now execute
-alongside the injection tail. There are no currently failed main-workflow nodes.
-The foreground workflows were generated normally from the repaired configuration:
-frame inputs are declared and staged through CondorIO, and their submit files
-request the corrected 1024 MB of working disk. Syracuse queue limits are 20 total /
-10 idle jobs per site, changed through the `site limits` command.
+The workflow resumed as root DAG 1167 from rescue checkpoint 004. All 305
+injection follow-up nodes have now completed successfully, as have all nine
+singles child workflows. Both corrected foreground generators passed and their
+100-node and 103-node child workflows are running without failures. The main DAG
+has 244/252 nodes complete. The foreground workflows were generated normally from
+the repaired configuration: frame inputs are declared and staged through CondorIO,
+and submit files request the corrected 1024 MB of working disk. Syracuse queue
+limits are 20 total / 10 idle jobs per site, changed through `site limits`.
 
 The injection tail was checkpointed only after confirming the canceled OSG
 allocation 16043206 absent from the queue and JobStatus=3 in history. Its next

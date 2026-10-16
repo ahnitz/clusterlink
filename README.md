@@ -6,8 +6,9 @@ automatically builds a SIF container from your environment, prepares remote cach
 and manages private configuration.
 No administrator changes or manual environment variables are required.
 
-**Development prototype.** The PyCBC acceptance workflow completed across three
-remote HTCondor submission hosts, with documented manual retries. See
+**Development prototype.** A full PyCBC SIF workflow has completed across SU and
+OSG, with a documented configuration intervention. A fresh unattended run is
+in progress. See
 [STATUS.md](STATUS.md) for evidence and remaining limitations.
 
 ## Setup once per project

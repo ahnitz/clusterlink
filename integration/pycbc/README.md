@@ -85,5 +85,7 @@ paths in fresh patches naturally refer to the new project.
 
 The earlier Conda-archive run completed with manual recovery. That history is
 preserved in [the earlier report](../acceptance-before-sif.md). It is not the
-fresh unattended SIF acceptance result. [STATUS.md](../../STATUS.md) tracks the
+fresh unattended SIF acceptance result. A subsequent full SIF development run
+also completed; its [scientific and report validation](sif-development-completion.json)
+records the configuration intervention and cleanup caveats. [STATUS.md](../../STATUS.md) tracks the
 current run and remaining limitations.

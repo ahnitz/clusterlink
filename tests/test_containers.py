@@ -39,9 +39,9 @@ exec /bin/bash "$script" "$@"
             with tarfile.open(artifact,'w:gz') as tar:
                 for name,data,mode in [('environment.sif',b'fake',0o600),('apptainer-runtime/bin/apptainer',fake,0o700)]:
                     info=tarfile.TarInfo(name);info.size=len(data);info.mode=mode;tar.addfile(info,io.BytesIO(data))
-            probe=root/'probe.sh';probe.write_text('#!/bin/bash\nprintf "%s\\n" "$CONDA_PREFIX" "$1" "$2" > observed\nexit 7\n');probe.chmod(0o700)
+            probe=root/'probe.sh';probe.write_text('#!/bin/bash\nprintf "%s\\n" "$CONDA_PREFIX" "$PEGASUS_PYTHON" "$1" "$2" > observed\nexit 7\n');probe.chmod(0o700)
             launch=root/'launch.sh';launch.write_text(launcher('./probe.sh','bundle.tar.gz',outputs=['missing.dat']))
             result=subprocess.run(['bash',str(launch),'with spaces','literal $value'],cwd=root,capture_output=True,text=True)
             self.assertEqual(result.returncode,7,result.stderr)
-            self.assertEqual((root/'observed').read_text().splitlines(),['/opt/clusterlink/env','with spaces','literal $value'])
+            self.assertEqual((root/'observed').read_text().splitlines(),['/opt/clusterlink/env','/opt/clusterlink/env/bin/python','with spaces','literal $value'])
             self.assertTrue((root/'missing.dat').exists())

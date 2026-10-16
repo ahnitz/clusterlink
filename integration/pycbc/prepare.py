@@ -10,10 +10,13 @@ parser.add_argument('--source', type=Path, required=True)
 parser.add_argument('--env', type=Path, required=True)
 parser.add_argument('--work', type=Path, required=True)
 parser.add_argument('--cache-root', type=Path, required=True)
+parser.add_argument('--evidence-dir', type=Path, help='Save generated patches outside the repository for a fresh run')
+parser.add_argument('--requirements', help='Native Condor requirements for the remote execution site')
 args = parser.parse_args()
 source, env, work, caches = [x.resolve() for x in (args.source,args.env,args.work,args.cache_root)]
 work.mkdir(parents=True, exist_ok=True)
-evidence = Path(__file__).resolve().parent
+evidence = (args.evidence_dir or Path(__file__).resolve().parent).resolve()
+evidence.mkdir(parents=True, exist_ok=True)
 site_rel = Path('pycbc/workflow/pegasus_sites.py')
 old = (source/site_rel).read_text()
 new = old.replace("KNOWN_SITES = ['local',", "KNOWN_SITES = ['local', 'clusterlink',")
@@ -29,6 +32,10 @@ function = '''def add_clusterlink_site(sitecat, cp):
 
 '''
 new = new.replace('def add_site(sitecat,',function+'def add_site(sitecat,').replace("    elif sitename == 'osg':", "    elif sitename == 'clusterlink':\n        add_clusterlink_site(sitecat, cp)\n    elif sitename == 'osg':")
+if args.requirements:
+    new = new.replace('    sitecat.add_sites(site)\n\n\ndef add_site(sitecat,',
+        '    site.add_profiles(Namespace.CONDOR, key="requirements", value='+repr(args.requirements)+')\n'
+        '    sitecat.add_sites(site)\n\n\ndef add_site(sitecat,')
 installed = next((env/'lib').glob('python*/site-packages'))
 (installed/site_rel).write_text(new)
 def patch(name, old, new, rel):

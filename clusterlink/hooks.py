@@ -122,6 +122,9 @@ def prepare(ad, site, state):
             ad['TransferOutput'] = ','.join(Path(p).name for p in outputs.split(',') if p)
         if 'Requirements' in ad:
             extra += 'requirements = ' + str(ad.lookup('Requirements')) + '\n'
+        native_extra = ad.get('BatchExtraSubmitArgs')
+        if isinstance(native_extra, str) and native_extra.strip():
+            extra += native_extra.rstrip() + '\n'
         ad['ClusterlinkRemoteSubmitArgs'] = extra
     return ad
 

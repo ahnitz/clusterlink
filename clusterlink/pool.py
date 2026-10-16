@@ -141,7 +141,11 @@ JOB_ROUTER_ROUTE_{route_key(name)} @=route
   SET ClusterlinkDestination = "{name}"
   SET Requirements = True
   EVALSET TransferOutputRemaps = ClusterlinkOutputRemaps
-  SET BatchExtraSubmitArgs = strcat(ifThenElse(isUndefined(ClusterlinkRemoteSubmitArgs), "", ClusterlinkRemoteSubmitArgs), ifThenElse(isUndefined(ClusterlinkCachedEnv), "", strcat("transfer_input_files = ", "$", "(transfer_input_files), {site['root']}/cache/", ClusterlinkCachedEnv, ".tar.gz")))
+"""
+        if site['scheduler'] == 'condor':
+            text += f"""  SET BatchExtraSubmitArgs = strcat(ifThenElse(isUndefined(ClusterlinkRemoteSubmitArgs), "", ClusterlinkRemoteSubmitArgs), ifThenElse(isUndefined(ClusterlinkCachedEnv), "", strcat("transfer_input_files = ", "$", "(transfer_input_files), {site['root']}/cache/", ClusterlinkCachedEnv, ".tar.gz")))
+"""
+        text += """
   DELETE ClusterlinkEligible
 @route
 """

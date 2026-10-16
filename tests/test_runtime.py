@@ -84,6 +84,9 @@ class RuntimeTests(unittest.TestCase):
             self.assertIn('JOB_ROUTER_ROUND_ROBIN_SELECTION = True', config)
             self.assertIn('SPOOL = ' + str(root), config)
             self.assertNotIn('batch condor su', config)
+            # Slurm's native options must survive unchanged, without Condor
+            # submit-language cache directives replacing them.
+            self.assertNotIn('SET BatchExtraSubmitArgs', config)
 
 
 if __name__ == '__main__':

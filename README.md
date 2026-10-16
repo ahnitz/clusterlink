@@ -73,7 +73,10 @@ automatically. The image includes userspace libraries such as glibc. Initial
 activation downloads a base matching the workstation distribution and builds the
 image; later activations reuse it until the environment changes. After installing
 or changing software, leave the project shell and activate again before submitting.
-Job hooks only reuse prepared images; they never download Apptainer or build SIFs.
+Activation publishes a verified image snapshot. Job hooks read its small manifest
+and check file metadata; they do not scan the Conda environment, hash the image,
+download Apptainer, or build SIFs. Source-environment edits take effect at the
+next activation, not during job routing.
 Apptainer installer output is saved in `.clusterlink/install-apptainer.log`.
 
 For Pegasus, select a vanilla Condor site with CondorIO. The PyCBC site adaptation
@@ -114,7 +117,7 @@ Logs live in `.clusterlink/log`. Use `clusterlink --help` for other controls.
 ## Current limits
 
 - Campaigns of 20–30k jobs and high submission rates have not been benchmarked.
-  Per-job environment checks and staging still have measurable overhead.
+  Per-job SSH cache checks and staging still have measurable overhead.
 - Remote HTCondor execution is tested. Slurm route generation is untested and
   cached delivery is currently Condor-only.
 - Routing uses native Job Router round robin and queue limits. Automatic

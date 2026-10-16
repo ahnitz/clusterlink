@@ -31,6 +31,44 @@ def bundle(prefix, state, base=None, *, allow_build=True):
     return build(prefix, state, base, allow_build=allow_build)
 
 
+def artifact_identity(path):
+    info = path.stat()
+    return [info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns]
+
+
+def publish_prepared(state, selection, artifact):
+    """Publish a verified immutable snapshot while activation holds its build lock."""
+    artifact = Path(artifact).resolve()
+    before = artifact_identity(artifact)
+    with artifact.open('rb') as stream:
+        digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+    disk = required_bundle_disk(artifact)
+    if before != artifact_identity(artifact) or artifact.name != digest + '.tar.gz':
+        raise ValueError('Prepared image changed or has an invalid digest')
+    record = {'version': 1, 'selection': selection, 'artifact': str(artifact),
+              'sha256': digest, 'environment_disk': disk, 'identity': before}
+    temporary = state / ('prepared-image.' + uuid.uuid4().hex + '.tmp')
+    temporary.write_text(json.dumps(record))
+    temporary.replace(state / 'prepared-image.json')
+
+
+def prepared_image(state, selection):
+    """Read the activation snapshot without locks, environment walks, or hashing."""
+    try:
+        record = json.loads((state / 'prepared-image.json').read_text())
+        artifact = Path(record['artifact'])
+        if (record['version'] != 1 or record['selection'] != selection
+                or artifact.parent != (state / 'artifacts').resolve()
+                or artifact.name != record['sha256'] + '.tar.gz'
+                or record['identity'] != artifact_identity(artifact)
+                or not isinstance(record['environment_disk'], int)
+                or record['environment_disk'] <= 0):
+            raise ValueError('Invalid prepared image')
+        return artifact, record['sha256'], record['environment_disk']
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise ValueError('Prepared project image is missing or changed; leave the project shell and run clusterlink activate') from error
+
+
 def required_bundle_disk(artifact):
     """Bytes needed for the immutable archive plus its unpacked environment."""
     record = artifact.with_suffix('.disk.json')

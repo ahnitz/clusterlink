@@ -1,5 +1,25 @@
 # Clusterlink acceptance status
 
+## Concurrent hook snapshot fix (0.1.3)
+
+The exclusive nonblocking packaging lock introduced in 0.1.2 caused concurrent
+read-only translation hooks to fail. Hooks also scanned the Conda environment
+and repeatedly hashed the image. Activation now publishes `prepared-image.json`
+atomically with the verified artifact path, digest, disk requirement, environment
+selection, and file identity. Hooks read that snapshot without a packaging lock,
+environment scan, or artifact hash. Changed/missing artifact metadata requires
+reactivation; source environment changes take effect on the next activation.
+The previous snapshot remains readable while activation prepares a replacement.
+HTCondor's native failure throttling remains unchanged.
+
+All 60 tests pass, including 64 concurrent preparations across four simulated
+routes while an exclusive build lock is held, with hashing and fingerprinting
+forbidden. Missing/modified artifacts and selection mismatches are rejected.
+The 0.1.3 wheel builds. These are local regression tests, not a new full workflow
+or thousands-job throughput benchmark. Existing projects must activate once
+after upgrading to publish their snapshot; no fresh workflow plan is needed
+solely for this fix.
+
 ## Queue limits (0.1.2)
 
 New enrollments default to unlimited total and idle routed jobs, replacing 10/2.
@@ -139,8 +159,7 @@ interventions. Its detailed evidence is preserved in
 
 ## Remaining limits
 
-Campaigns of 20–30k jobs have not been benchmarked. Per-job fingerprinting, bundle
-hashing, SSH cache checks, and staging have measurable overhead; see the bounded
+Campaigns of 20–30k jobs have not been benchmarked. Per-job SSH cache checks and staging have measurable overhead; see the bounded
 [scale validation plan](TESTING.md#scale-validation-still-required).
 
 Remote HTCondor is tested. Slurm enrollment and routing exist, but no Slurm

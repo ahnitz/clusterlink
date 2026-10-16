@@ -34,9 +34,10 @@ class ProjectTests(unittest.TestCase):
             root=Path(tmp);env=root/'env';(env/'conda-meta').mkdir(parents=True)
             conda=root/'conda';conda.touch()
             with patch('pathlib.Path.cwd',return_value=root):state=project.initialize(env)
-            with patch('clusterlink.environments.bundle') as build,patch.dict(os.environ,{'CONDA_EXE':str(conda)}),patch('clusterlink.project.subprocess.check_output',return_value='# conda hook'),patch('clusterlink.project.subprocess.call',return_value=0) as shell,patch('clusterlink.pool.configure'),patch('clusterlink.pool.running',return_value=False),patch('clusterlink.pool.start') as start:
+            with patch('clusterlink.environments.publish_prepared') as publish,patch('clusterlink.environments.bundle') as build,patch.dict(os.environ,{'CONDA_EXE':str(conda)}),patch('clusterlink.project.subprocess.check_output',return_value='# conda hook'),patch('clusterlink.project.subprocess.call',return_value=0) as shell,patch('clusterlink.pool.configure'),patch('clusterlink.pool.running',return_value=False),patch('clusterlink.pool.start') as start:
                 self.assertEqual(project.activate(state),0)
             build.assert_called_once_with(env, state, base=None)
+            publish.assert_called_once_with(state, project.environment_selection(state), build.return_value)
             start.assert_called_once_with(state)
             script=(state/'shell.bash').read_text()
             self.assertIn('conda activate '+str(env),script)

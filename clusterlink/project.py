@@ -96,12 +96,13 @@ def activate(state):
     if not (prefix / 'conda-meta').is_dir():
         raise ValueError('Recorded Conda environment is missing: ' + str(prefix))
     conda = conda_executable()
-    from .environments import bundle
+    from .environments import bundle, publish_prepared
     import fcntl
     print('Preparing project SIF (reused when the environment is unchanged)...', flush=True)
     with (state / '.pack.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        bundle(prefix, state, base=selection.get('container_base'))
+        artifact = bundle(prefix, state, base=selection.get('container_base'))
+        publish_prepared(state, selection, artifact)
     # Validate shell integration before starting the project manager.
     hook = subprocess.check_output([conda, 'shell.bash', 'hook'], text=True)
     script = hook + '\nconda activate ' + shlex.quote(str(prefix)) + ' || exit 1\n'

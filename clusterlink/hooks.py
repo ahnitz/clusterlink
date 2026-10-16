@@ -10,7 +10,7 @@ import sys
 import classad2
 
 from .cli import remote_call
-from .environments import bundle, executable_command, launcher, required_bundle_disk
+from .environments import prepared_image, executable_command, launcher
 from . import leases
 
 
@@ -50,15 +50,7 @@ def prepare(ad, site, state):
     ident = hashlib.sha256(str(ad.get('GlobalJobId', '')).encode()).hexdigest()
     work = state / 'prepared' / ident
     work.mkdir(parents=True, exist_ok=True)
-    with (state / '.pack.lock').open('a') as lock:
-        try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError as error:
-            raise ValueError('Project image preparation is busy; wait for activation to finish before submitting jobs') from error
-        artifact = bundle(prefix, state, base=selection.get('container_base'), allow_build=False)
-        environment_disk = required_bundle_disk(artifact)
-    with artifact.open('rb') as stream:
-        digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+    artifact, digest, environment_disk = prepared_image(state, selection)
     inputs = ad.get('TransferInput', '')
     if not isinstance(inputs, str):
         inputs = ''

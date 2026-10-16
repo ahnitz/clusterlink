@@ -35,10 +35,10 @@ class HookTests(unittest.TestCase):
                  'Arguments': "'a b' 'quoted'", 'RequestCpus': 4,
                  'TransferInput': 'data.txt', 'TransferOutput': 'nested/result.txt',
                  'TransferOutputRemaps': 'result.txt=nested/result.txt'})
-            with patch('clusterlink.hooks.required_bundle_disk', return_value=2048), patch('clusterlink.hooks.bundle', return_value=artifact) as bundle, patch(
+            with patch('clusterlink.hooks.prepared_image', return_value=(artifact, hashlib.sha256(b'test archive').hexdigest(), 2048)) as bundle, patch(
                     'clusterlink.hooks.remote_call', return_value={'cached': True}) as remote:
                 out = prepare(ad, {'scheduler': 'condor'}, root)
-            bundle.assert_called_once_with(str(env), root, base=None, allow_build=False)
+            bundle.assert_called_once_with(root, {'prefix':str(env),'backend':'sif'})
             self.assertEqual(out['Arguments'], "'a b' 'quoted'")
             self.assertEqual(out['NodeNumber'], 4)
             self.assertIn('+UserChosenAttribute = "preserved"\n', out['ClusterlinkRemoteSubmitArgs'])
@@ -66,7 +66,7 @@ class HookTests(unittest.TestCase):
             for override in ({'ClusterlinkArtifact': '/old/archive.tar.gz'},
                              {'ClusterlinkBackend': 'conda'},
                              {'ClusterlinkEnvironment': '/different/env'}):
-                with self.subTest(override=override), self.assertRaises(ValueError), patch('clusterlink.hooks.bundle') as build:
+                with self.subTest(override=override), self.assertRaises(ValueError), patch('clusterlink.hooks.prepared_image') as build:
                     prepare(classad2.ClassAd(override), {}, root)
                 build.assert_not_called()
 

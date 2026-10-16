@@ -33,6 +33,10 @@ A fresh project, `local/pycbc-unattended` (ID
 `2f6b6ab1e0e94ec9ab06ed1ff00503c1`), was submitted once at 01:34:58 local time
 on 2026-10-16 with the two-minute held-job timeout installed before image
 build and planning. It has no manual job interventions.
+A later development job exposed HTCondor's default 10 KiB hook-output capture
+limit. Generated project configuration now raises `JOB_ROUTER.PIPE_BUFFER_MAX`
+to 16 MiB. The development pool was reconfigured for a live regression; the
+clean project's configuration and hook implementation remain unchanged.
 No successful unattended full run is claimed yet.
 
 The test launcher also needed a Bash invocation fix before the first submission;

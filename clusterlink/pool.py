@@ -102,6 +102,8 @@ JOB_ROUTER_ROUND_ROBIN_SELECTION = True
 JOB_ROUTER_SOURCE_JOB_CONSTRAINT = ClusterlinkEligible =?= True && JobUniverse == 5
 JOB_ROUTER_ROUTE_NAMES = {', '.join(route_key(name) for name in sites)}
 JOB_ROUTER_POLLING_PERIOD = 10
+# Translation returns the whole job ad. Pegasus ads exceed the 10 KiB default.
+JOB_ROUTER.PIPE_BUFFER_MAX = 16777216
 NUM_CPUS = {max(1, local_slots)}
 MEMORY = 1024
 START = ClusterlinkEligible =!= True

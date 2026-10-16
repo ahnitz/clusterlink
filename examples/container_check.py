@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import socket
 import sys
 
 import numpy as np
@@ -26,6 +27,9 @@ assert np.allclose(series.numpy(), restored.numpy(), atol=1e-12)
 snr = matched_filter(series, series, low_frequency_cutoff=20)
 assert np.isfinite(snr.numpy()).all() and abs(snr).max() > 0
 result = {'site':sys.argv[1], 'glibc':platform.libc_ver(), 'prefix':os.environ['CONDA_PREFIX'],
+          'hostname':socket.gethostname(),
+          'thread_limits':{key:os.environ.get(key) for key in
+                           ('OMP_NUM_THREADS','MKL_NUM_THREADS','OPENBLAS_NUM_THREADS','OMP_THREAD_LIMIT')},
           'pycbc':pycbc.__version__, 'strlcpy':buffer.value.decode(),
           'fft_max_error':float(np.max(np.abs(series.numpy()-restored.numpy()))),
           'matched_filter_peak':float(abs(snr).max())}

@@ -46,7 +46,8 @@ for path in (source/'examples/search').glob('*.ini'):
 p=work/'executables.ini';old=p.read_text()
 new=old.replace('condor|request_disk = 1000','condor|request_disk = 1024M').replace('condor|accounting_group = ligo.dev.o4.cbc.bbh.pycbcoffline','condor|+BatchRuntime = 3600').replace('pycbc|primary_site = condorpool_symlink','pycbc|primary_site = clusterlink').replace('pycbc|site = condorpool_copy','pycbc|site = clusterlink').replace('pycbc|site = condorpool_shared','pycbc|site = clusterlink')
 # Ordinary Pegasus/DAGMan retries; Clusterlink has no retry policy of its own.
-new=new.replace('[pegasus_profile]\n', '[pegasus_profile]\ndagman|retry = 2\n')
+new=new.replace('[pegasus_profile]\n', '[pegasus_profile]\ndagman|retry = 2\n'
+    'condor|+BatchExtraSubmitArgs = "periodic_remove = (JobStatus == 2) && (time() - JobCurrentStartDate > 3600)"\n')
 new=new.replace('[pegasus_profile-results_page]\npycbc|site = clusterlink',
     '[pegasus_profile-results_page]\npycbc|site = local\ncondor|universe = local\n'
     'env|PYTHONNOUSERSITE = 1\nenv|MPLCONFIGDIR = '+str(work/'mpl')+'\n'

@@ -13,9 +13,13 @@ The launcher now disables devpts in its extracted private runtime configuration,
 covering both the internal extractor and payload. This changes no host settings.
 General OSG and affected-worker regression probes passed. The targeted job
 (local 73, remote 16043293) returned valid PyCBC numerical results with exit zero
-on `nal-005-docker`. A second fresh project, `local/pycbc-clean-run2`, is now
-generating its full workflow, with two native DAGMan retries configured before
-submission. No successful unattended full run is claimed yet.
+on `nal-005-docker`. A second fresh project, `local/pycbc-clean-run2`, was submitted once as root job 1 at 00:20 local time on 2026-10-16,
+with two native DAGMan retries configured before submission. That development run was then stopped after H1 and L1 full-data inspiral jobs
+passed, because a wrapper review found that `--cleanenv` discarded native
+scheduler CPU-thread limits. The launcher now preserves those limits and GPU
+visibility masks through Apptainer, retaining explicit Apptainer overrides.
+Allocation/override probes are pending before `local/pycbc-final-run` is submitted.
+No successful unattended full run is claimed yet.
 
 The test launcher also needed a Bash invocation fix before the first submission;
 the unused preflight plan is retained separately and submitted no jobs.

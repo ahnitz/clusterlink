@@ -147,6 +147,14 @@ def launcher(command, archive='environment.tar.gz', source_prefix=None, staged_s
         '  export APPTAINER_TMPDIR="$PWD/.clusterlink-env/tmp"\n'
         '  export APPTAINER_CACHEDIR="$PWD/.clusterlink-env/cache"\n'
         '  export APPTAINER_CONFIGDIR="$PWD/.clusterlink-env/config"\n'
+        # Keep native allocation limits across --cleanenv. Explicit Apptainer
+        # overrides retain their normal precedence; absent values stay absent.
+        '  for name in CUBACORES GOMAXPROCS JULIA_NUM_THREADS MKL_NUM_THREADS NUMEXPR_NUM_THREADS '
+        'OMP_NUM_THREADS OMP_THREAD_LIMIT OPENBLAS_NUM_THREADS PYTHON_CPU_COUNT ROOT_MAX_THREADS '
+        'TF_LOOP_PARALLEL_ITERATIONS TF_NUM_THREADS CUDA_VISIBLE_DEVICES NVIDIA_VISIBLE_DEVICES; do\n'
+        '    target="APPTAINERENV_$name"\n'
+        '    if [[ -v "$name" && ! -v "$target" ]]; then export "$target=${!name}"; fi\n'
+        '  done\n'
         # This is our freshly extracted, user-owned runtime, never the host's
         # configuration. The nested unsquashfs helper does not inherit CLI
         # --no-mount flags, so configure devpts here for both helper and payload.

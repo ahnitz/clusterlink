@@ -36,7 +36,8 @@ recorded in `run-commands.json`. There are no manual environment-variable export
 
 The user-namespace requirement is ordinary native Condor matching for our two
 test pools, which advertise that capability. It excludes workers where that
-attribute is false or absent. A different cluster may need a different native
+attribute is false or absent. The final acceptance run also excludes `OG-NODE-10-5-255-134`, where a standalone
+probe stalled. A different cluster may need a different native
 requirement or a capability check; this is not automatic capability discovery.
 
 After the root DAG finishes, run in the same activated project:
@@ -58,6 +59,10 @@ to a reference scientific analysis.
 - Execution profiles enable two native DAGMan retries, select this site, remove the site's original accounting
   group, and request 1 GiB of working disk. Clusterlink adds environment and
   input-file storage to the disk request.
+- The remote HTCondor jobs have a native one-hour running-state limit, including
+  startup, supplied through `+BatchExtraSubmitArgs`; DAGMan owns retries. The
+  bare `batch_extra_submit_args` submit keyword is grid-universe-specific, so
+  routed vanilla jobs use its ClassAd attribute explicitly.
 - Workflow generators and final HTML assembly use local-universe jobs in the
   project's environment; their scientific child jobs still use the remote site.
 - Main workflow data discovery uses `FROM_PREGENERATED_LCF_FILES` and selected

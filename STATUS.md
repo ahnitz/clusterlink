@@ -17,17 +17,19 @@ connections, then recovered; the package's existing nonprompting login path work
 again and deferred cache releases drained successfully. Existing native jobs
 were tracked to completion/removal; no remote identity was discarded.
 
-The workflow resumed as root DAG 623 from rescue checkpoint 003. Nine singles
-child DAGs are complete. The 305-node injection follow-up DAG has passed 140 nodes without new failures
-after repairing its missing frame inputs from the selected cache records. A fresh
-75-job foreground workflow was also generated: all 45 strain-reading jobs declare
-the expected two frame inputs. Syracuse queue limits were raised through the
-new `site limits` command to 20 total / 10 idle jobs per site. The main
-workflow has 236 completed nodes. Two foreground generators require another
-checkpoint retry: their first local wrappers lacked Pegasus's success footer;
-the next attempt encountered configuration files left by that successful first
-execution. The footer is fixed and prior generated configuration files preserved
-under backup names so the retry can regenerate them.
+The workflow resumed as root DAG 1167 from rescue checkpoint 004, preserving
+236 main nodes and 298/305 injection follow-up nodes. Both corrected foreground
+generators passed; their child DAGs contain 100 and 103 nodes and now execute
+alongside the injection tail. There are no currently failed main-workflow nodes.
+The foreground workflows were generated normally from the repaired configuration:
+frame inputs are declared and staged through CondorIO, and their submit files
+request the corrected 1024 MB of working disk. Syracuse queue limits are 20 total /
+10 idle jobs per site, changed through the `site limits` command.
+
+The injection tail was checkpointed only after confirming the canceled OSG
+allocation 16043206 absent from the queue and JobStatus=3 in history. Its next
+attempt explicitly selects su. This allows independent foreground work to proceed
+without duplicating the old allocation. Earlier completed nodes remain preserved.
 
 Cache cleanup now writes durable local release records and delivers them with
 the next preparation/status/cache contact. An unavailable SSH endpoint therefore
@@ -70,7 +72,10 @@ See [PyCBC setup and validation](integration/pycbc/README.md) for patches and va
 Workflow generators and final HTML assembly use the isolated local environment;
 their scientific child jobs retain remote execution.
 
-An external process renamed Conda-managed ncurses files to `*_CaseConflict`.
+Conda-managed ncurses aliases were renamed to `*_CaseConflict`. A running
+Synology Drive daemon was identified locally, and a fresh package-inventory check
+still reports three missing aliases. Excluding project `local/` from sync has
+been requested so ordinary automatic packing can be retested after repair.
 The remaining test explicitly selects a previously validated immutable snapshot;
 automatic packaging does not bypass integrity checks or silently reuse old archives.
 Two glibc-incompatible dependency builds were replaced with compatible builds

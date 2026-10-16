@@ -106,6 +106,14 @@ class CacheTests(unittest.TestCase):
             result = self.call('reuse', digest, json.dumps([str(other)]), self.lease)
             self.assertFalse(result['cached'])
 
+    def test_interrupted_partial_is_reclaimed_before_budget_check(self):
+        data = b'12345678'
+        digest = hashlib.sha256(data).hexdigest()
+        (self.root/'cache'/(digest+'.tar.partial')).write_bytes(b'old-data')
+        self.upload(data)
+        self.assertEqual((self.root/'cache'/(digest+'.tar.gz')).read_bytes(), data)
+        self.assertEqual(len(list((self.root/'cache').iterdir())), 1)
+
 
 if __name__ == '__main__':
     unittest.main()

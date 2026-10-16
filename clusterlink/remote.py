@@ -201,6 +201,10 @@ def main():
         if action not in {"upload", "reuse"}:
             raise ValueError("Unknown operation")
         lease = sys.argv[5] if len(sys.argv) > 5 else None
+        # All writers hold this cache lock. A partial left here belongs to an
+        # interrupted attempt and must not consume the next attempt's budget.
+        temp = target.with_suffix(".partial")
+        temp.unlink(missing_ok=True)
         input_stream = sys.stdin.buffer
         if action == "reuse":
             # Only probe explicitly enrolled, user-owned roots beneath this
@@ -257,7 +261,6 @@ def main():
             raise RuntimeError("Project storage budget would be exceeded")
         if shutil.disk_usage(root).free < expected + settings["reserve_bytes"]:
             raise RuntimeError("Insufficient free space for upload and reserve")
-        temp = target.with_suffix(".partial")
         h = hashlib.sha256()
         received = 0
         try:

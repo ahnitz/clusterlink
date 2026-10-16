@@ -154,7 +154,7 @@ def main():
     p.add_argument('arguments', nargs=argparse.REMAINDER)
     p = sub.add_parser("pool")
     p.add_argument("action", choices=["configure", "start", "stop", "queue"])
-    p.add_argument("--local-slots", type=int, default=0)
+    p.add_argument("--local-slots", type=int, default=None)
     args = parser.parse_args()
     try:
         from . import project

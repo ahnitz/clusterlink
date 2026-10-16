@@ -53,6 +53,12 @@ finite injection optimal SNRs. It checks scientific integrity, not equivalence
 to a reference scientific analysis. It also checks report assets and local links;
 the upstream unset dashboard placeholder is reported separately.
 
+Use a new output directory and apply the Clusterlink/CondorIO site to all
+scientific execution profiles, including generated child workflows. Changing
+a site catalog does not repair old `.sub` files: a `remote_initialdir` pointing
+to submit-host scratch indicates a shared-filesystem plan that must be regenerated.
+Local-universe helpers need no edits to the generated Condor memory or slot settings.
+
 ## Configuration adaptations
 
 - One vanilla Condor site named `clusterlink`, with CondorIO and the optional

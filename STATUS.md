@@ -1,5 +1,25 @@
 # Clusterlink acceptance status
 
+## Project setup fixes (0.1.1)
+
+Removed the private manager’s artificial 1 GB memory and default one-CPU
+advertisements. HTCondor detects host resources for local-universe helpers;
+explicit local-worker slot choices survive configuration regeneration. A live
+2 GB helper reproduced the old idle condition and completed after the fix.
+Generated protocol helpers start Python directly and remove exported shell
+functions, including malformed module initialization inherited from the shell.
+A native submit requirement rejects routed shared-filesystem scratch paths
+before remote staging; ordinary CondorIO and local-universe jobs remain allowed.
+
+The reported integration project contained submit files referencing another
+planning run’s scratch directory. Its retry must use a fresh CondorIO workflow
+plan, including child workflows. No changes were made to that agent’s project.
+
+[Setup regression evidence](integration/project-setup-regression.json) records
+the local helper, early rejection, and successful dev1 SIF/CondorIO probe
+(exit zero, validated output, zero cache leases). All 53 tests pass and the
+0.1.1 wheel builds. The other agent’s full workflow retry remains outstanding.
+
 ## Completed fresh SIF acceptance
 
 The fresh project `local/pycbc-acceptance` completed its full PyCBC mini search

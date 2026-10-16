@@ -2,7 +2,6 @@
 import json
 import os
 from pathlib import Path
-import shlex
 import socket
 import subprocess
 import sys
@@ -10,7 +9,11 @@ import time
 
 
 def environment(state):
-    return {**os.environ, "CONDOR_CONFIG": str(state / "condor.config"), "CLUSTERLINK_STATE": str(state)}
+    # Exported Bash functions can be truncated by daemon environment handling.
+    # They are shell setup, not inputs to Condor or its protocol helpers.
+    clean = {key: value for key, value in os.environ.items()
+             if not key.startswith('BASH_FUNC_')}
+    return {**clean, "CONDOR_CONFIG": str(state / "condor.config"), "CLUSTERLINK_STATE": str(state)}
 
 
 def route_key(name):
@@ -48,16 +51,23 @@ def configure(state, local_slots=None):
     settings_path.write_text(json.dumps(settings))
     package_root = str(Path(__file__).resolve().parent.parent)
     shim = state / "remote-gahp"
-    shim.write_text("#!/bin/sh\nexport CLUSTERLINK_STATE=" + shlex.quote(str(state)) +
-                    "\nexport PYTHONPATH=" + shlex.quote(package_root) +
-                    "\nexec " + shlex.quote(sys.executable) + " -m clusterlink.gahp \"$@\"\n")
-    shim.chmod(0o700)
     hook = state / 'prepare-job'
-    hook.write_text(shim.read_text().replace('clusterlink.gahp', 'clusterlink.hooks'))
-    hook.chmod(0o700)
     cleanup = state / 'cleanup-job'
-    cleanup.write_text(hook.read_text().replace('clusterlink.hooks', 'clusterlink.hooks cleanup'))
-    cleanup.chmod(0o700)
+    for path, module, arguments in [(shim, 'clusterlink.gahp', []),
+                                    (hook, 'clusterlink.hooks', []),
+                                    (cleanup, 'clusterlink.hooks', ['cleanup'])]:
+        # Start Python directly: a shell parses exported functions before any
+        # shell-script cleanup can run. Keep the interpreter from installation.
+        path.write_text(f"#!{sys.executable}\n"
+                        "import os, runpy, sys\n"
+                        "for key in tuple(os.environ):\n"
+                        "    if key.startswith('BASH_FUNC_'): del os.environ[key]\n"
+                        f"os.environ['CLUSTERLINK_STATE'] = {str(state)!r}\n"
+                        f"os.environ['PYTHONPATH'] = {package_root!r}\n"
+                        f"sys.path.insert(0, {package_root!r})\n"
+                        f"sys.argv[1:1] = {arguments!r}\n"
+                        f"runpy.run_module({module!r}, run_name='__main__')\n")
+        path.chmod(0o700)
     username = __import__("getpass").getuser()
     schedd = f'clusterlink-{username}'
     if (state / 'project.json').exists():
@@ -104,8 +114,10 @@ JOB_ROUTER_ROUTE_NAMES = {', '.join(route_key(name) for name in sites)}
 JOB_ROUTER_POLLING_PERIOD = 10
 # Translation returns the whole job ad. Pegasus ads exceed the 10 KiB default.
 JOB_ROUTER.PIPE_BUFFER_MAX = 16777216
-NUM_CPUS = {max(1, local_slots)}
-MEMORY = 1024
+# Reject shared-filesystem plans before they become remote staging failures.
+SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) ClusterlinkCondorIO
+SUBMIT_REQUIREMENT_ClusterlinkCondorIO = (TARGET.JobUniverse != 5) || (TARGET.ClusterlinkEligible =!= True) || (isUndefined(TARGET.RemoteIwd) && isUndefined(TARGET.REMOTE_Iwd))
+SUBMIT_REQUIREMENT_ClusterlinkCondorIO_REASON = "Clusterlink uses CondorIO sandboxes: remove remote_initialdir/RemoteIwd and replan Pegasus with data.configuration=condorio in a fresh output directory. Shared-filesystem plans are unsupported."
 START = ClusterlinkEligible =!= True
 SUSPEND = False
 PREEMPT = False
@@ -117,6 +129,10 @@ JOB_ROUTER_HOOK_KEYWORD = CLUSTERLINK
 CLUSTERLINK_HOOK_TRANSLATE_JOB = {hook}
 CLUSTERLINK_HOOK_JOB_CLEANUP = {cleanup}
 """
+    # Local-universe jobs match the schedd's machine ad. Let native Condor
+    # detect host resources; an artificial MEMORY limit can strand helpers.
+    if local_slots:
+        text += f'NUM_CPUS = {local_slots}\n'
     selected = state / 'environment.json'
     if selected.exists():
         from .project import environment_selection

@@ -1,0 +1,78 @@
+{
+  "local_helper": {
+    "ClusterId": 1,
+    "JobUniverse": 12,
+    "RequestMemory": 2000,
+    "JobStatus": 4,
+    "ExitCode": 0
+  },
+  "before": [
+    {
+      "ClusterId": 1,
+      "JobStatus": 1,
+      "JobUniverse": 12,
+      "RequestMemory": 2000,
+      "Requirements": "/Expr((TARGET.Arch == \"X86_64\") && (TARGET.OpSys == \"LINUX\") && (TARGET.Disk >= RequestDisk) && (TARGET.Memory >= RequestMemory))/"
+    }
+  ],
+  "sharedfs_rejection": {
+    "returncode": 1,
+    "stderr": "\nERROR: Failed to commit job submission into the queue.\nERROR: Clusterlink uses CondorIO sandboxes: remove remote_initialdir/RemoteIwd and replan Pegasus with data.configuration=condorio in a fresh output directory. Shared-filesystem plans are unsupported.\n"
+  },
+  "tests": 53,
+  "version": "0.1.1",
+  "remote_smoke": {
+    "job": {
+      "ClusterId": 26,
+      "JobUniverse": 9,
+      "JobStatus": 4,
+      "ExitCode": 0,
+      "GridJobId": "batch condor 127.0.0.1_33791_clusterlink-ahnitz-934b9bacf38d4359a6cac3090b18c84a_gravity-dev2.syr.edu_26.0_1792177542 condor/102493//"
+    },
+    "result": {
+      "token": "setup-regression",
+      "sum": 15.0,
+      "sum_squares": 55.0,
+      "hostname": "gravity-dev1.syr.edu",
+      "python": "/opt/clusterlink/env/bin/python",
+      "prefix": "/opt/clusterlink/env",
+      "glibc": [
+        "glibc",
+        "2.42"
+      ],
+      "pycbc": "0.0a2123",
+      "threads": {
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1"
+      }
+    },
+    "cache": {
+      "dev1": {
+        "cache_used_bytes": 1523313836,
+        "total_bytes": 1523506525,
+        "active_leases": 0,
+        "cache_bytes": 2000000000,
+        "storage_bytes": 5000000000,
+        "reserve_bytes": 1000000000
+      },
+      "dev3": {
+        "cache_used_bytes": 751756136,
+        "total_bytes": 751940910,
+        "active_leases": 0,
+        "cache_bytes": 2000000000,
+        "storage_bytes": 5000000000,
+        "reserve_bytes": 1000000000
+      },
+      "dev4": {
+        "cache_used_bytes": 751756136,
+        "total_bytes": 751940912,
+        "active_leases": 0,
+        "cache_bytes": 2000000000,
+        "storage_bytes": 5000000000,
+        "reserve_bytes": 1000000000
+      }
+    }
+  },
+  "malformed_shell_functions": "generated cleanup helper exits zero with empty stdout/stderr",
+  "wheel": "personal_clusterlink-0.1.1-py3-none-any.whl"
+}

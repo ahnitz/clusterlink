@@ -65,7 +65,13 @@ image; later activations reuse it until the environment changes.
 
 For Pegasus, select a vanilla Condor site with CondorIO. The PyCBC site adaptation
 and completed example are documented in [the PyCBC guide](integration/pycbc/README.md).
+Select that site for child workflows too, and generate a fresh workflow plan;
+previously generated shared-filesystem submit files cannot be reused. Routed jobs
+with `remote_initialdir` are rejected with an explanation.
 Pegasus manages dependencies; HTCondor handles routing and remote job tracking.
+Local-universe workflow helpers use HTCondor’s detected host resources; no manual
+memory or slot edits are needed. The project manager does not replace or change
+the existing system pool’s resource policies.
 
 When finished with the shell:
 

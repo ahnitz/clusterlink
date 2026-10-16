@@ -89,6 +89,9 @@ props=installed/'pycbc/workflow/pegasus_files/pegasus-properties.conf'
 old=(source/'pycbc/workflow/pegasus_files/pegasus-properties.conf').read_text()
 # Keep workflow metadata local and disable optional upstream telemetry.
 old='\n'.join(line for line in old.splitlines() if not line.startswith(('pegasus.monitord.encoding','pegasus.catalog.workflow.amqp.url')))+'\n'
+# A held remote job must terminate before DAGMan can apply its retry policy.
+old=old.replace('condor.periodic_remove=(JobStatus == 5) && ((CurrentTime - EnteredCurrentStatus) > 43200)',
+    'condor.periodic_remove=(JobStatus == 5) && ((CurrentTime - EnteredCurrentStatus) > 120)')
 extra='\n# Clusterlink isolated acceptance test\npegasus.transfer.worker.package=true\npegasus.transfer.worker.package.strict=false\npegasus.catalog.master.url=sqlite:///'+str(work/'master.db')+'\n'
 props.write_text(old+extra)
 (evidence/'properties.txt').write_text(extra)

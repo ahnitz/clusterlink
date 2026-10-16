@@ -23,7 +23,11 @@ produced OpenMP/OpenBLAS limits of two inside the SIF, while an explicit MKL
 override remained one. `local/pycbc-final-run` was submitted once as root job 1 at 00:52 local time
 on 2026-10-16. Its native policy allows two DAGMan retries and caps each remote
 job at one hour including startup. The predeclared worker requirement excludes
-the one stalled Syracuse worker. No job intervention has been performed on this run.
+the one stalled Syracuse worker. At 01:25 a remote coincidence job was held, exposing the inherited Pegasus
+12-hour held-job timeout. At 01:31 the private manager received a native
+120-second held-job removal policy so DAGMan can retry. This run is now a
+development run with one recorded intervention, not unattended acceptance.
+The preparation helper now installs that policy before planning future runs.
 No successful unattended full run is claimed yet.
 
 The test launcher also needed a Bash invocation fix before the first submission;

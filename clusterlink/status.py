@@ -80,7 +80,7 @@ def render(data):
         enabled = 'enabled' if site['enabled'] else 'disabled for new jobs'
         lines += [f"  {site['name']}: {site['ssh']} ({site['scheduler']}; {enabled})",
                   f"    Remote directory: {site['root']}",
-                  f"    Queue limits: {site['max_jobs']} total, {site['max_idle']} idle"]
+                  f"    Queue limits: {'unlimited' if site['max_jobs'] == -1 else site['max_jobs']} total, {'unlimited' if site['max_idle'] == -1 else site['max_idle']} idle"]
         limits = site['limits']
         def gb(key):
             return f"{limits[key] / 1e9:g} GB" if key in limits else 'not set'

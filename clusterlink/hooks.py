@@ -51,8 +51,11 @@ def prepare(ad, site, state):
     work = state / 'prepared' / ident
     work.mkdir(parents=True, exist_ok=True)
     with (state / '.pack.lock').open('a') as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
-        artifact = bundle(prefix, state, base=selection.get('container_base'))
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as error:
+            raise ValueError('Project image preparation is busy; wait for activation to finish before submitting jobs') from error
+        artifact = bundle(prefix, state, base=selection.get('container_base'), allow_build=False)
         environment_disk = required_bundle_disk(artifact)
     with artifact.open('rb') as stream:
         digest = hashlib.file_digest(stream, 'sha256').hexdigest()

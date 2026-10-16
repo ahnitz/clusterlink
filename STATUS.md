@@ -1,5 +1,30 @@
 # Clusterlink acceptance status
 
+## Queue limits (0.1.2)
+
+New enrollments default to unlimited total and idle routed jobs, replacing 10/2.
+Enrollment accepts explicit limits; `site limits` also accepts `unlimited`.
+Existing limits are preserved, including enrollment updates. The native route
+uses MaxIdleJobs=-1 and MaxJobs=2147483647 (its integer ceiling, because native
+per-route MaxJobs does not support a negative unlimited sentinel). Remote
+scheduler policies still apply. Large-scale throughput remains unbenchmarked.
+
+All 57 regression tests pass and the 0.1.2 wheel builds. Tests cover prepared
+artifact integrity without provisioning, installer failure logs, hook reuse-only
+behavior, explicit enrollment limits, and unlimited/5000-job route generation.
+Native idle-limit behavior is described in the [HTCondor Job Router manual](https://htcondor.readthedocs.io/en/main/grid-computing/job-router.html).
+
+## Image preparation outside hooks (0.1.2)
+
+Activation prepares the SIF and its private Apptainer runtime before starting
+the manager. Job translation now requires that prepared image: missing, stale,
+or damaged artifacts produce a short reactivation instruction instead of an
+installer/build inside the hook. Busy image preparation is reported without
+waiting on the packaging lock. Installer stdout/stderr go to a project log,
+with its path reported on failure. The reported transform timeout has not been
+independently reproduced; this removes the expensive build path that could
+cause it. First remote cache upload still occurs during job preparation.
+
 ## Project setup fixes (0.1.1)
 
 Removed the private manager’s artificial 1 GB memory and default one-CPU

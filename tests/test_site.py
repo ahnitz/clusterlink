@@ -24,3 +24,26 @@ class SiteTests(unittest.TestCase):
             with patch('sys.argv',argv[:-1]+['21']),self.assertRaises(SystemExit):
                 main()
             self.assertEqual(path.read_text(),before)
+
+    def test_unlimited_route_limits_and_large_finite_limits(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root/'pool.json').write_text(json.dumps({'port':43779}))
+            path = root/'sites.json'
+            path.write_text(json.dumps({'test': {'scheduler':'slurm', 'root':'/home/user/cache', 'max_jobs':10, 'max_idle':2}}))
+            for maximum, idle, expected_max, expected_idle in [('unlimited', 'unlimited', 2147483647, -1), ('5000', '500', 5000, 500)]:
+                argv = ['clusterlink','--state',tmp,'site','limits','test','--max-jobs',maximum,'--max-idle',idle]
+                with patch('sys.argv',argv), patch('clusterlink.pool.running',return_value=False):
+                    main()
+                config = (root/'condor.config').read_text()
+                self.assertIn(f'MaxJobs = {expected_max}', config)
+                self.assertIn(f'MaxIdleJobs = {expected_idle}', config)
+
+    def test_enrollment_parser_accepts_explicit_limits_and_preservation_default(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for extra, expected in [([], (None, None)), (['--max-jobs','5000','--max-idle','500'], (5000, 500)), (['--max-jobs','unlimited','--max-idle','unlimited'], (-1, -1))]:
+                argv = ['clusterlink','--state',tmp,'enroll','test','--ssh','test','--cache-gb','2','--storage-gb','5'] + extra
+                with patch('sys.argv',argv), patch('clusterlink.cli.enroll') as enroll, patch('clusterlink.pool.configure'):
+                    main()
+                args = enroll.call_args.args[0]
+                self.assertEqual((args.max_jobs, args.max_idle), expected)

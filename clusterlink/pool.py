@@ -143,12 +143,14 @@ CLUSTERLINK_HOOK_JOB_CLEANUP = {cleanup}
         text += 'ClusterlinkEligible = True\nJOB_ROUTER_HOOK_KEYWORD = CLUSTERLINK\n'
         text += 'CLUSTERLINK_HOOK_TRANSLATE_JOB = ' + str(hook) + '\n'
         text += 'CLUSTERLINK_HOOK_JOB_CLEANUP = ' + str(cleanup) + '\n'
+    # Native per-route MaxJobs has no negative unlimited sentinel (unlike
+    # MaxIdleJobs). Use its signed-int ceiling for an uncapped enrollment.
     for name, site in sites.items():
         text += f"""
 JOB_ROUTER_ROUTE_{route_key(name)} @=route
   REQUIREMENTS {"True" if site.get("enabled", True) else "False"} && (ClusterlinkSite =?= undefined || ClusterlinkSite == "auto" || ClusterlinkSite == "{name}")
   GridResource = "batch {site['scheduler']} {name}"
-  MaxJobs = {site['max_jobs']}
+  MaxJobs = {2147483647 if site['max_jobs'] == -1 else site['max_jobs']}
   MaxIdleJobs = {site['max_idle']}
   SET ClusterlinkDestination = "{name}"
   SET Requirements = True

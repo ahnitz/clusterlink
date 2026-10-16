@@ -10,6 +10,23 @@ from .transport import destination, python_command, run
 from .submission import submit as submit_native
 
 
+def queue_limit(value):
+    if value == 'unlimited':
+        return -1
+    try:
+        number = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError('Use a positive integer or unlimited') from None
+    if not 0 < number <= 2147483647:
+        raise argparse.ArgumentTypeError('Use a positive integer up to 2147483647 or unlimited')
+    return number
+
+
+def validate_queue_limits(maximum, idle):
+    if maximum != -1 and idle != -1 and idle > maximum:
+        raise ValueError('Require max-idle <= max-jobs when both limits are finite')
+
+
 def state_dir(args):
     from .project import discover
     root = discover(args.state)
@@ -44,6 +61,9 @@ def enroll(args, state):
     if previous.get('python') and previous.get('ssh') == site['ssh']:
         site['python'] = previous['python']
         site['python_bootstrap'] = previous.get('python_bootstrap')
+    maximum = args.max_jobs if args.max_jobs is not None else previous.get('max_jobs', -1)
+    idle = args.max_idle if args.max_idle is not None else previous.get('max_idle', -1)
+    validate_queue_limits(maximum, idle)
     failures = []
     for mode in (["login", "exec"] if args.transport == "auto" else [args.transport]):
         site["transport"] = mode
@@ -74,7 +94,7 @@ def enroll(args, state):
     site["root"] = args.remote_dir or remote_root(state, p["home"], args.name)
     if not re.fullmatch(r"/[A-Za-z0-9_./-]+", site["root"]):
         raise ValueError("Remote project path must be absolute and contain no whitespace/metacharacters")
-    site.update(scheduler=scheduler, limits=limits, probe=p, max_idle=args.max_idle, max_jobs=args.max_jobs,
+    site.update(scheduler=scheduler, limits=limits, probe=p, max_idle=idle, max_jobs=maximum,
                 enabled=previous.get("enabled", True))
     portable = args.helpers == 'portable' or bool(sites.get(args.name, {}).get('helpers')) or not all(p['commands'][n] for n in ['blahpd', 'condor_ft-gahp'])
     if portable:
@@ -131,13 +151,13 @@ def main():
     p.add_argument("--cache-gb", type=float, required=True)
     p.add_argument("--storage-gb", type=float, required=True)
     p.add_argument("--reserve-gb", type=float, default=1)
-    p.add_argument("--max-idle", type=int, default=2)
-    p.add_argument("--max-jobs", type=int, default=10)
+    p.add_argument("--max-idle", type=queue_limit, help="Idle-job limit or unlimited (default: unlimited; preserves existing limit with --update)")
+    p.add_argument("--max-jobs", type=queue_limit, help="Total routed-job limit or unlimited (default: unlimited; preserves existing limit with --update)")
     p = sub.add_parser("site", help="Control routing without reinstalling remote helpers")
     p.add_argument("action", choices=["enable", "disable", "limits"])
     p.add_argument("name")
-    p.add_argument('--max-jobs', type=int)
-    p.add_argument('--max-idle', type=int)
+    p.add_argument('--max-jobs', type=queue_limit)
+    p.add_argument('--max-idle', type=queue_limit)
     p = sub.add_parser("status", help="Show selected environment, pool state, and linked clusters")
     p.add_argument('--remote', action='store_true', help='Contact clusters for live cache usage and flush deferred lease releases')
     p.add_argument('--json', action='store_true', help='Print the overview as JSON')
@@ -178,8 +198,7 @@ def main():
                 site = sites[args.name]
                 maximum = args.max_jobs if args.max_jobs is not None else site['max_jobs']
                 idle = args.max_idle if args.max_idle is not None else site['max_idle']
-                if not 0 < idle <= maximum:
-                    raise ValueError('Require 0 < max-idle <= max-jobs')
+                validate_queue_limits(maximum, idle)
                 site.update(max_jobs=maximum, max_idle=idle)
             else:
                 if args.max_jobs is not None or args.max_idle is not None:
@@ -191,7 +210,7 @@ def main():
             if pool.running(state):
                 subprocess.run(["condor_reconfig"], env=pool.environment(state), check=True)
             if args.action == 'limits':
-                print(f'{args.name}: max-jobs={maximum}, max-idle={idle}; existing jobs remain tracked')
+                print(f'{args.name}: max-jobs={"unlimited" if maximum == -1 else maximum}, max-idle={"unlimited" if idle == -1 else idle}; existing jobs remain tracked')
             else:
                 print(args.name + (" enabled for new jobs" if args.action == "enable" else " disabled for new jobs; existing jobs remain tracked"))
         elif args.command == "enroll":

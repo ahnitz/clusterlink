@@ -43,13 +43,20 @@ def runtime(state):
     partial = state / 'container-runtime.partial'
     if partial.exists():
         shutil.rmtree(partial)
-    subprocess.run(['bash', str(installer), '-v', VERSION, '-d', 'el8', str(partial)], check=True, stdout=sys.stderr)
-    subprocess.run([str(partial/'bin/apptainer'), '--version'], check=True, stdout=sys.stderr)
+    log = state / 'install-apptainer.log'
+    try:
+        with log.open('w') as output:
+            subprocess.run(['bash', str(installer), '-v', VERSION, '-d', 'el8', str(partial)],
+                           check=True, stdout=output, stderr=subprocess.STDOUT)
+            subprocess.run([str(partial/'bin/apptainer'), '--version'],
+                           check=True, stdout=output, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as error:
+        raise RuntimeError(f'Private Apptainer installation failed; see {log}') from error
     partial.rename(target)
     return target
 
 
-def build(prefix, state, base=None):
+def build(prefix, state, base=None, *, allow_build=True):
     import conda_pack
     from .environments import fingerprint
     prefix, state = Path(prefix).resolve(), Path(state).resolve()
@@ -64,6 +71,8 @@ def build(prefix, state, base=None):
         info = json.loads(manifest.read_text()); cached = artifacts/(info['sha256']+'.tar.gz')
         if cached.is_file() and checksum(cached) == info['sha256']:
             return cached
+    if not allow_build:
+        raise ValueError('Project SIF is missing, stale, or damaged; leave the project shell and run clusterlink activate before submitting jobs')
     private_runtime = runtime(state)
     env = {**os.environ}
     for keyname, directory in [('APPTAINER_CACHEDIR','container-cache'),('APPTAINER_TMPDIR','container-tmp'),('APPTAINER_CONFIGDIR','container-config')]:

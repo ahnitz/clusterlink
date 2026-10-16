@@ -25,10 +25,10 @@ def fingerprint(prefix):
     return h.hexdigest()
 
 
-def bundle(prefix, state, base=None):
+def bundle(prefix, state, base=None, *, allow_build=True):
     """Build or reuse the project's SIF delivery bundle."""
     from .containers import build
-    return build(prefix, state, base)
+    return build(prefix, state, base, allow_build=allow_build)
 
 
 def required_bundle_disk(artifact):

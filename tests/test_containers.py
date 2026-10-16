@@ -1,3 +1,4 @@
+import hashlib
 import io
 import json
 import os
@@ -68,3 +69,41 @@ exec /bin/bash "$script" "$@"
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('SIF missing', result.stderr)
             self.assertFalse((root / 'payload-ran').exists())
+
+
+class PreparedImageTests(unittest.TestCase):
+    def test_hook_lookup_never_provisions_and_checks_cached_integrity(self):
+        from clusterlink.containers import build, VERSION
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp)
+            prefix = state / 'env'
+            prefix.mkdir()
+            base = 'docker://fedora:43'
+            with patch('clusterlink.environments.fingerprint', return_value='signature'), patch('clusterlink.containers.runtime') as runtime:
+                with self.assertRaisesRegex(ValueError, 'clusterlink activate'):
+                    build(prefix, state, base, allow_build=False)
+                key = hashlib.sha256(json.dumps([str(prefix), 'signature', base, VERSION, 'sif-v1']).encode()).hexdigest()
+                digest = hashlib.sha256(b'prepared image').hexdigest()
+                artifact = state / 'artifacts' / (digest + '.tar.gz')
+                artifact.write_bytes(b'prepared image')
+                (state / 'artifacts' / (key + '.manifest.json')).write_text(json.dumps({'sha256': digest}))
+                self.assertEqual(build(prefix, state, base, allow_build=False), artifact)
+                artifact.write_bytes(b'damaged')
+                with self.assertRaisesRegex(ValueError, 'clusterlink activate'):
+                    build(prefix, state, base, allow_build=False)
+                runtime.assert_not_called()
+
+    def test_install_failure_keeps_output_in_log(self):
+        from clusterlink.containers import runtime
+        data = b'test installer'
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp)
+            def failing(command, **kwargs):
+                kwargs['stdout'].write('Extracting ... details\n')
+                self.assertEqual(kwargs['stderr'], subprocess.STDOUT)
+                raise subprocess.CalledProcessError(1, command)
+            with patch('clusterlink.containers.shutil.which', return_value='/tool'), patch('clusterlink.containers.urllib.request.urlopen', return_value=io.BytesIO(data)), patch('clusterlink.containers.INSTALLER_SHA256', hashlib.sha256(data).hexdigest()), patch('clusterlink.containers.subprocess.run', side_effect=failing):
+                with self.assertRaisesRegex(RuntimeError, 'install-apptainer.log'):
+                    runtime(state)
+            self.assertIn('Extracting', (state / 'install-apptainer.log').read_text())
+            self.assertFalse((state / 'container-runtime').exists())

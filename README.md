@@ -31,6 +31,16 @@ Replace the Conda environment name, SSH alias, and budgets with your own.
 `--env` also accepts an explicit environment path. Names resolve through your
 Conda installation and are recorded as absolute paths. Budgets are
 in decimal GB. Use another `enroll` command for each additional cluster.
+New enrollments have no Clusterlink total/idle job cap; remote scheduler policy
+still applies. To bound a site, pass `--max-jobs 5000 --max-idle 500` to `enroll`.
+Existing enrollments retain their limits. To remove both limits on one:
+
+```bash
+clusterlink site limits su --max-jobs unlimited --max-idle unlimited
+```
+
+These are queue limits, not CPU counts. Clusterlink does not infer cluster capacity
+from the SSH login node.
 Use `--remote-dir /path/to/dedicated-project-directory` during enrollment when
 a cluster requires a different storage location. Choose a separate directory for
 each project; cache, staging, helpers, logs, and submission temporary files belong
@@ -61,7 +71,10 @@ executable, resource-request, and input/output-transfer settings in `job.sub`.
 Clusterlink wraps the executable and caches the image and private Apptainer runtime
 automatically. The image includes userspace libraries such as glibc. Initial
 activation downloads a base matching the workstation distribution and builds the
-image; later activations reuse it until the environment changes.
+image; later activations reuse it until the environment changes. After installing
+or changing software, leave the project shell and activate again before submitting.
+Job hooks only reuse prepared images; they never download Apptainer or build SIFs.
+Apptainer installer output is saved in `.clusterlink/install-apptainer.log`.
 
 For Pegasus, select a vanilla Condor site with CondorIO. The PyCBC site adaptation
 and completed example are documented in [the PyCBC guide](integration/pycbc/README.md).

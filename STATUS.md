@@ -37,6 +37,8 @@ A later development job exposed HTCondor's default 10 KiB hook-output capture
 limit. Generated project configuration now raises `JOB_ROUTER.PIPE_BUFFER_MAX`
 to 16 MiB. The development pool was reconfigured for a live regression; the
 clean project's configuration and hook implementation remain unchanged.
+The formerly rejected job (local 617, remote OSG 16043515) then completed
+with exit zero; see `integration/pycbc/hook-output-regression.json`.
 No successful unattended full run is claimed yet.
 
 The test launcher also needed a Bash invocation fix before the first submission;

@@ -1,0 +1,15 @@
+{
+  "project": "local/pycbc-final-run",
+  "source_job": 617,
+  "routed_job": 722,
+  "remote_site": "osg",
+  "remote_job": 16043515,
+  "node": "combine_statmap_ID36_ID0000167",
+  "reproduced_hook_output_bytes": 10329,
+  "native_default_pipe_buffer_bytes": 10240,
+  "configured_job_router_pipe_buffer_bytes": 16777216,
+  "exit_code": 0,
+  "fix": "Set JOB_ROUTER.PIPE_BUFFER_MAX in project-local Condor configuration; no remote changes.",
+  "clean_acceptance_project_reconfigured": false,
+  "source_reference": "https://github.com/htcondor/htcondor/blob/main/src/condor_daemon_core.V6/daemon_core.cpp"
+}

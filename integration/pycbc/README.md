@@ -55,7 +55,7 @@ to a reference scientific analysis.
 
 - One vanilla Condor site named `clusterlink`, with CondorIO and the optional
   native worker requirement. No Clusterlink executable paths in the workflow.
-- Execution profiles select this site, remove the site's original accounting
+- Execution profiles enable two native DAGMan retries, select this site, remove the site's original accounting
   group, and request 1 GiB of working disk. Clusterlink adds environment and
   input-file storage to the disk request.
 - Workflow generators and final HTML assembly use local-universe jobs in the

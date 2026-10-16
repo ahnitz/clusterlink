@@ -16,7 +16,8 @@ from .submission import submit as submit_native
 
 
 def state_dir(args):
-    root = Path(args.state).resolve()
+    from .project import discover
+    root = discover(args.state)
     root.mkdir(parents=True, exist_ok=True)
     return root
 
@@ -61,7 +62,8 @@ def enroll(args, state):
             except RuntimeError:
                 from .bootstrap import shell_probe, install as install_python
                 home, arch = shell_probe(site)
-                site['root'] = args.remote_dir or home + '/.clusterlink/' + args.name
+                from .project import remote_root
+                site['root'] = args.remote_dir or remote_root(state, home, args.name)
                 install_python(site, state, limits, home, arch)
                 p = remote_call(site, "probe")
             break
@@ -73,7 +75,8 @@ def enroll(args, state):
     if scheduler is None:
         raise ValueError("No supported scheduler found")
     # Restrict generated shell/config values until all backends support quoting.
-    site["root"] = args.remote_dir or p["home"] + "/.clusterlink/" + args.name
+    from .project import remote_root
+    site["root"] = args.remote_dir or remote_root(state, p["home"], args.name)
     if not re.fullmatch(r"/[A-Za-z0-9_./-]+", site["root"]):
         raise ValueError("Remote project path must be absolute and contain no whitespace/metacharacters")
     site.update(scheduler=scheduler, limits=limits, probe=p, max_idle=args.max_idle, max_jobs=args.max_jobs,
@@ -147,10 +150,13 @@ def submit(args, state):
 
 def main():
     parser = argparse.ArgumentParser(description="Personal HTCondor cluster enrollment prototype")
-    parser.add_argument("--state", default=os.environ.get("CLUSTERLINK_STATE", "./local/clusterlink"))
+    parser.add_argument("--state", help="Explicit state directory (normally discovered from the project)")
     sub = parser.add_subparsers(dest="command", required=True)
+    p = sub.add_parser('init', help='Initialize this project with an explicit Conda environment')
+    p.add_argument('--env', required=True)
+    sub.add_parser('deactivate', help='Leave an activated project shell')
     p = sub.add_parser('activate', help='Select a Conda environment for ordinary Condor submissions')
-    p.add_argument('--env', default=os.environ.get('CONDA_PREFIX'))
+    p.add_argument('--env', help='Legacy state only; projects use their recorded environment')
     p.add_argument('--artifact', help='Explicitly pin an existing conda-pack archive for subsequent submissions')
     p = sub.add_parser("enroll")
     p.add_argument("name")
@@ -197,8 +203,21 @@ def main():
     p.add_argument("--local-slots", type=int, default=0)
     args = parser.parse_args()
     try:
-        state = Path(args.state).resolve() if args.command == "status" else state_dir(args)
+        from . import project
+        if args.command == 'init':
+            if args.state:
+                raise ValueError('init creates .clusterlink in the current project; do not pass --state')
+            print('Initialized ' + str(project.initialize(args.env)))
+            return
+        if args.command == 'deactivate':
+            raise ValueError('Use clusterlink deactivate inside the shell opened by clusterlink activate')
+        state = project.discover(args.state) if args.command == 'status' else state_dir(args)
         if args.command == 'activate':
+            if (state / 'project.json').exists():
+                if args.env or args.artifact:
+                    raise ValueError('Project activation uses the environment recorded by init')
+                raise SystemExit(project.activate(state))
+            args.env = args.env or os.environ.get('CONDA_PREFIX')
             if not args.env or not (Path(args.env) / 'conda-meta').is_dir():
                 raise ValueError('Activate a Conda environment or pass --env PREFIX')
             selection = {'prefix': str(Path(args.env).resolve())}
@@ -240,11 +259,21 @@ def main():
                 print(args.name + (" enabled for new jobs" if args.action == "enable" else " disabled for new jobs; existing jobs remain tracked"))
         elif args.command == "enroll":
             enroll(args, state)
+            if (state / 'project.json').exists():
+                from . import pool
+                pool.configure(state)
+                if pool.running(state):
+                    subprocess.run(['condor_reconfig'], env=pool.environment(state), check=True)
         elif args.command == "pack":
             pack(args, state)
         elif args.command == "cache":
             cache(args, state)
         elif args.command == 'submit':
+            if (state / 'project.json').exists():
+                prefix = json.loads((state / 'environment.json').read_text())['prefix']
+                if args.env and Path(args.env).resolve() != Path(prefix):
+                    raise ValueError('Submission environment must match the project environment')
+                args.env = prefix
             submit(args, state)
         elif args.command == "pool":
             from . import pool
@@ -260,7 +289,7 @@ def main():
             from .status import collect, render
             result = collect(state, remote=args.remote)
             print(json.dumps(result, indent=2) if args.json else render(result))
-    except (ValueError, RuntimeError, OSError, KeyError) as e:
+    except (ValueError, RuntimeError, OSError, KeyError, subprocess.CalledProcessError) as e:
         parser.exit(1, f"clusterlink: {e}\n")
 
 

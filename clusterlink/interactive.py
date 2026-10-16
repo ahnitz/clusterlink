@@ -83,13 +83,14 @@ def connect(site, argv):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--state', default=os.environ.get('CLUSTERLINK_STATE', './local/clusterlink'))
+    parser.add_argument('--state', default=None)
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument('job')
     parser.add_argument('command', nargs=argparse.REMAINDER)
     args = parser.parse_args()
     try:
-        site, argv = resolve(Path(args.state).resolve(), args.job)
+        from .project import discover
+        site, argv = resolve(discover(args.state), args.job)
         argv += args.command
         if args.dry_run:
             print(json.dumps({'ssh': site['ssh'], 'transport': site['transport'], 'command': argv}))

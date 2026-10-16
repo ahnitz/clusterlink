@@ -59,6 +59,9 @@ def configure(state, local_slots=None):
     cleanup.write_text(hook.read_text().replace('clusterlink.hooks', 'clusterlink.hooks cleanup'))
     cleanup.chmod(0o700)
     username = __import__("getpass").getuser()
+    schedd = f'clusterlink-{username}'
+    if (state / 'project.json').exists():
+        schedd += '-' + json.loads((state / 'project.json').read_text())['id']
     text = f"""include : /etc/condor/condor_config
 LOCAL_CONFIG_FILE =
 LOCAL_CONFIG_DIR =
@@ -75,7 +78,7 @@ CONDOR_HOST = 127.0.0.1
 NETWORK_INTERFACE = 127.0.0.1
 BIND_ALL_INTERFACES = False
 USE_SHARED_PORT = False
-SCHEDD_NAME = clusterlink-{username}@$(FULL_HOSTNAME)
+SCHEDD_NAME = {schedd}@$(FULL_HOSTNAME)
 UID_DOMAIN = clusterlink.local
 FILESYSTEM_DOMAIN = clusterlink.local
 SEC_DEFAULT_AUTHENTICATION = REQUIRED

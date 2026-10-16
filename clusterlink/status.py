@@ -31,6 +31,7 @@ def collect(state, remote=False):
     active = os.environ.get('CONDA_PREFIX')
     result = {
         'state_directory': str(state),
+        'project': read(state / 'project.json'),
         'environment': {
             'prefix': prefix,
             'conda_metadata_present': bool(prefix and (Path(prefix) / 'conda-meta').is_dir()),
@@ -62,7 +63,7 @@ def collect(state, remote=False):
 
 def render(data):
     env, pool_state = data['environment'], data['pool']
-    lines = [f"State: {data['state_directory']}",
+    lines = ([f"Project: {data['project']['root']}"] if data.get('project') else []) + [f"State: {data['state_directory']}",
              f"Conda environment: {env['prefix'] or 'not selected (run clusterlink activate --env PREFIX)'}",
              f"Packaging: {env['packaging']}"]
     if env['prefix'] and not env['conda_metadata_present']:

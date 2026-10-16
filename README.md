@@ -1,269 +1,95 @@
 # Clusterlink
 
-Personal cluster federation over SSH, with automatic Conda environment packaging,
-HTCondor job routing, and file staging.
+Run Conda-based scientific jobs on your SSH-accessible clusters from one project
+folder. Keep using ordinary HTCondor submissions or Pegasus workflows. Clusterlink
+handles environment packaging, remote cache preparation, and private configuration.
+No administrator changes or manual environment variables are required.
 
-**Development prototype:** small scientific jobs have completed through two
-remote HTCondor submission hosts, including input/output transfer and execution
-from cached environment bundles. A two-stage Pegasus CondorIO workflow also completed across both sites.
-The isolated PyCBC acceptance workflow completed across su, osg, and sugwg-login2,
-with documented configuration fixes and explicit retries. See [STATUS.md](STATUS.md) for evidence and gaps.
+**Development prototype.** The PyCBC acceptance workflow completed across three
+remote HTCondor submission hosts, with documented manual retries. See
+[STATUS.md](STATUS.md) for evidence and remaining limitations.
 
-## What it does
+## Setup once per project
 
-Clusterlink uses your existing SSH aliases to enroll remote submission hosts.
-It runs a private, user-owned HTCondor pool with configuration and state in a
-local directory. It does not edit `/etc/condor` or the remote scheduler settings.
-HTCondor's Job Router selects a destination; its native BLAHP and file-transfer
-helpers submit and monitor the remote job. The remote scheduler allocates CPUs.
-
-The `submit` command packs a selected Conda environment, generates a launcher,
-and declares input/output transfers. For remote HTCondor sites, immutable bundles
-are cached on the submission host; that host's Condor transfers the bundle to the
-compute node. No shared filesystem or container runtime is assumed for this path.
-
-## Current prerequisites
-
-- Linux workstation, Python 3.11+, Conda, OpenSSH, and a local HTCondor installation
-  with Job Router and GridManager.
-- Working SSH access to a remote submission host and permission to submit jobs.
-  Existing aliases, keys, agents, and jump hosts are reused.
-- Enrollment uses remote Python 3.8+ when available, or installs a checksum-verified,
-  private Python runtime under the enrolled directory. `--python portable` forces
-  this path. Enrollment also installs official HTCondor
-  batch helpers in the user's project directory when missing; `--helpers portable`
-  requests this explicitly. It writes only user-owned configuration. Bootstrap
-  needs ordinary Linux shell utilities, including tar and sha256sum.
-- A compatible Linux Conda environment. Arbitrary system dependencies, GPU
-  drivers, and architecture compatibility are not automatically resolved yet.
-
-## Install
-
-From your activated project Conda environment:
+You need Linux, Bash, Conda, OpenSSH, and HTCondor with Job Router/GridManager on
+your workstation. Start with your project's Conda environment activated, then:
 
 ```bash
 python -m pip install git+https://github.com/ahnitz/clusterlink.git
+cd my-project
+clusterlink init --env /absolute/path/to/your/conda-env
+clusterlink enroll su --ssh su --cache-gb 20 --storage-gb 100
 ```
 
-For this prototype, run commands from your project root. State defaults to
-`local/clusterlink` there. Keep it outside the environment being bundled.
-Project initialization and parent-directory discovery are not implemented yet.
+Replace the environment path, SSH alias, and budgets with your own. Budgets are
+in decimal GB. Use another `enroll` command for each additional cluster.
+Enrollment installs missing helpers in your remote home directory and configures
+the project automatically. SSH access must work without interactive prompts.
 
-## Enroll and start
+`init` records the environment and creates an ignored `.clusterlink/` directory.
+Commands discover it from the project folder or any subdirectory. Each project
+gets its own local queue, configuration, and unique remote directories—even when
+two projects enroll the same SSH alias. They still share your account's cluster
+quotas. Do not copy `.clusterlink/` into another project; initialize that project
+separately. Project paths currently cannot contain spaces or shell metacharacters.
 
-Replace `my-cluster` with an SSH alias that already works for you:
+## Work in the project
 
 ```bash
-clusterlink enroll first --ssh my-cluster --cache-gb 5 --storage-gb 10
-clusterlink pool configure
-clusterlink pool start
+clusterlink activate
 clusterlink status
-```
-
-Budgets are decimal GB. Enrollment discovers the scheduler and uses a dedicated
-`~/.clusterlink/first` directory on the remote host. `--remote-dir` can select
-another dedicated directory beneath your remote home. `--max-idle` (default 2)
-and `--max-jobs` (default 10) bound each route's queued jobs.
-
-Add another site with another `enroll` command. Then regenerate and reload the
-private configuration:
-
-```bash
-clusterlink enroll second --ssh another-cluster --cache-gb 5 --storage-gb 10
-clusterlink pool configure
-clusterlink site enable second
-```
-
-Temporarily stop new jobs going to a site without losing its existing job IDs:
-
-```bash
-clusterlink site disable first
-clusterlink site enable first
-```
-
-These commands reload the private pool when it is running. Disabling a site
-preserves its enrollment, cache, and tracking of accepted jobs; it does not cancel
-or migrate them. Enroll an alternate scheduler under a new site name. A shared
-home directory does not mean two login hosts share a scheduler queue.
-
-Adjust a site's queue limits without reinstalling its helpers:
-
-```bash
-clusterlink site limits first --max-jobs 20 --max-idle 10
-```
-
-The limits control native Job Router submissions, not scheduler priority or a
-storage quota. Lowering a limit preserves already accepted jobs.
-
-Enrollment automatically tries login-shell and command-shell transport. SSH
-allows nonprompting keyboard-interactive authentication after public-key
-acceptance, as required by some sites. Actual password/MFA prompts currently fail;
-interactive authentication and connection reuse are future work. Use `enroll --update` to update a site after its jobs have stopped.
-
-## Ordinary Condor and Pegasus jobs
-
-Select the environment once in your submission shell:
-
-```bash
-eval "$(clusterlink activate --env "$CONDA_PREFIX")"
 condor_submit job.sub
-```
-
-The generated private configuration marks vanilla jobs for routing. A native
-Job Router hook bundles the environment, checks the selected site's cache, and
-wraps the executable. Keep using normal `transfer_input_files` and
-`transfer_output_files`. Pegasus should use a vanilla Condor site with
-`data.configuration = condorio`; see `examples/pegasus_smoke.py`.
-
-For reproducible runs, `clusterlink activate --env PREFIX --artifact ARCHIVE`
-explicitly selects an existing conda-pack archive instead of repacking the live
-environment. Use an archive created from that prefix; executable paths are still
-relocated relative to it. Run `activate --env PREFIX` again to return to automatic
-packaging. Existing queued jobs retain their submission-time selection. A single
-submit file can instead set `+ClusterlinkArtifact = "/absolute/environment.tar.gz"`.
-There is no automatic fallback to old archives when a live environment is damaged.
-
-Clusterlink owns the cache and its leases. HTCondor owns job/data transport and
-remote scheduler tracking; Pegasus owns workflow dependencies. Only environment
-bundles are cached currently: arbitrary input data still follows ordinary Condor
-transfer. On a cache hit the archive does not cross the workstation-to-cluster
-link, but remote Condor still transfers it to each compute sandbox. Large cache
-uploads use an inactivity timeout, allowing a slow transfer to continue while
-bytes are still progressing. If another enrolled cache is visible under the
-remote home directory, an identical immutable archive can be linked directly after
-checksum and storage-budget checks, avoiding another workstation upload. This
-is optional discovery; separate filesystems still work normally.
-
-## Project status
-
-```bash
-clusterlink status                 # Quick local overview; no SSH connections
-clusterlink status --remote        # Also check live remote cache/storage usage
-clusterlink status --json          # Structured output (combine with --remote)
-```
-
-The overview shows the selected state directory and Conda environment, automatic
-packaging versus a pinned archive, the local Condor master state, and all linked
-clusters with their SSH aliases, scheduler types, routing status, remote directories,
-queue limits, and storage budgets. It reports when your shell's active Conda
-environment differs from the configured selection. Environment presence is not a
-full package-integrity check, and master presence is not a scheduler-health check.
-
-`--remote` also flushes completed-job cache releases and reports each unreachable
-site independently. The default works offline and does not create missing state.
-Status uses the same state directory as other commands;
-project-root discovery is not implemented yet. The previous cache-only JSON-lines
-status output is replaced by this overview; scripts should use `--json`.
-
-## Run the small example
-
-From the repository, with the environment containing NumPy activated:
-
-```bash
-clusterlink submit --input examples/input.json --output result.json \
-  examples/analyze.py input.json result.json
-clusterlink pool queue
-```
-
-The command prints a local job ID and an absolute result directory. Once the job
-finishes, verify its returned output:
-
-```bash
-python examples/verify.py /path/printed/by/submit/result.json
-```
-
-No manual archive creation or destination selection is required. `--env PREFIX`
-selects an environment explicitly; otherwise the active `CONDA_PREFIX` is used.
-An installed executable can replace the Python script, for example
-`clusterlink submit --env /path/to/env my-installed-command arguments`.
-Installed entry-point relocation was verified with `pycbc_inspiral --version`
-on OSG. Convenience-command inputs and outputs currently need simple, distinct filenames.
-Declare every required data file; workstation paths are not automatically shared.
-
-Useful options, placed before the executable:
-
-- `--site first`: choose a particular enrolled site; the default is `auto`.
-- `--no-cache`: transfer the environment with each job.
-- `--artifact /path/environment.tar.gz`: use a prebuilt conda-pack archive.
-
-Automatic placement currently uses HTCondor Job Router round robin and per-site
-queue limits, not resource-capability discovery. Remote jobs remain visible as
-source/routed jobs in the private local queue; remote CPUs do not become local slots.
-
-## Help, logs, and stopping
-
-```bash
-clusterlink --help
-clusterlink enroll --help
-clusterlink submit --help
-clusterlink pool queue
-clusterlink status
-clusterlink pool stop
-```
-
-Job directories contain the generated submit file, launcher, event log, stdout,
-stderr, and returned files. Daemon logs are under `local/clusterlink/log`.
-After the activation step above, use native Condor commands directly:
-
-```bash
 condor_q
-condor_rm JOB_ID
 ```
 
-Stopping the pool does not remove remote jobs, caches, or enrollment. Cancellation
-recovery after loss of established SSH helper connections, and a full private-pool
-restart with a remote job in flight have passed tests. Do not delete state while jobs
-are outstanding. `ssh_to_job JOB_ID` resolves routed remote Condor IDs and forwards SSH; actual
-interactive sessions depend on the remote pool permitting worker access. An OSG
-command succeeded in one test, but another worker connection stalled in native
-Condor CCB negotiation; universal interactive access is not verified.
+`activate` opens a Bash project shell, activates the exact recorded Conda
+environment, selects its Condor configuration, and starts its project job manager
+if needed. It does not modify your shell startup files. Use ordinary Condor
+executable, resource-request, and input/output-transfer settings in `job.sub`.
+Clusterlink wraps the executable and caches the environment automatically.
 
-## Limits and next milestones
+For Pegasus, select a vanilla Condor site with CondorIO. The PyCBC site adaptation
+and completed example are documented in [the PyCBC guide](integration/pycbc/README.md).
+Pegasus manages dependencies; HTCondor handles routing and remote job tracking.
 
-- Real execution is tested with remote HTCondor only. Slurm enrollment/route
-  generation exists but has not been validated; cached delivery is Condor-only.
-- Nested output filenames work across the two Condor transfer hops. Outputs must
-  have distinct basenames; whole-directory transfers are not supported by the
-  underlying SSH grid transport.
-- Cache uploads enforce configured budgets and checksums. Native submissions
-  acquire per-job leases; cleanup records durable local releases, delivered with
-  the next job preparation or `clusterlink status --remote` / `clusterlink cache` contact.
-  SSH outages therefore do not delay completed-job reporting. Until contact is
-  restored those entries stay pinned, so eviction remains conservative. Legacy
-  explicit `cache` operations retain permanent pins. `submit --artifact` uses
-  the same per-job leases as automatic packaging.
-  `--storage-gb` is not a filesystem quota or a hard limit on scheduler staging.
-- A native Job Router hook prepares the selected site's environment automatically,
-  including ordinary `condor_submit` and Pegasus compute jobs. An unreachable
-  selected site currently retries rather than automatically failing over.
-- The convenience command defaults to one CPU, 1 GiB memory, 2 GiB disk,
-  and a five-minute runtime request. Override these with `--cpus`, `--memory-mb`,
-  `--disk-mb`, and `--runtime` (seconds).
-- Pegasus CondorIO completed all 13 nodes of the two-stage example, with compute
-  jobs on different clusters. The isolated PyCBC search test completed, including follow-ups and HTML assembly;
-  see STATUS.md for interventions and portability limits.
-- A transferred private Apptainer runtime successfully ran a SIF with its own
-  glibc on both test clusters. OSG needed `--unsquash` because FUSE was unavailable.
-  This still requires permitted user namespaces. Automatic Conda-to-SIF packaging
-  is not implemented; the default backend remains conda-pack.
-
-See [TESTING.md](TESTING.md) for the validation plan. Run local unit tests with:
+When finished with the shell:
 
 ```bash
-python -m unittest discover -s tests -v
+clusterlink deactivate
 ```
 
-Development uses small, reviewable commits. Local environments, archives,
-credentials, enrollment settings, and job outputs belong in ignored `local/`,
-not in Git.
+This returns to the previous shell and environment. Submitted jobs keep running;
+the project manager continues tracking them.
 
-## Upstream components
+## Inspect and control
 
-- [HTCondor SSH batch submission](https://htcondor.readthedocs.io/en/latest/grid-computing/grid-universe.html#remote-batch-job-submission-via-ssh)
-- [HTCondor Job Router](https://htcondor.readthedocs.io/en/main/grid-computing/job-router.html)
-- [conda-pack](https://conda.github.io/conda-pack/)
-- [Pegasus deployment documentation](https://pegasus.isi.edu/documentation/user-guide/deployment-scenarios.html)
+```bash
+clusterlink status                 # Environment, manager, linked clusters, limits
+clusterlink status --remote        # Also check live cache and storage usage
+clusterlink site disable su        # Stop new routing there; preserve existing jobs
+clusterlink site enable su
+condor_rm JOB_ID                   # Cancel a job inside the activated project shell
+```
 
-Enrollment copies installed HTCondor BLAHP shell adapters into the user's remote
-project directory, retaining their upstream copyright notices. These adapters
-are not vendored in this repository.
+Status works offline by default. `--remote` also delivers pending cache-lease
+releases. `--json` provides structured output. A running master is not a complete
+scheduler-health check, and environment presence is not a package-integrity check.
+Logs live in `.clusterlink/log`. Use `clusterlink --help` for other controls.
+`clusterlink pool stop` stops the project manager; it does not cancel remote jobs.
+
+## Current limits
+
+- Remote HTCondor execution is tested. Slurm route generation is untested and
+  cached delivery is currently Condor-only.
+- Routing uses native Job Router round robin and queue limits. Automatic
+  cross-site failover and capability discovery are not implemented.
+- Conda bundles still require compatible worker operating systems and libraries.
+  Automatic container creation is not implemented.
+- Only environment bundles are cached. Other inputs use ordinary CondorIO.
+  Cache budgets are enforced; total scheduler staging is not a hard disk quota.
+- Outputs must have distinct basenames; directory transfers are unsupported.
+- `ssh_to_job` resolves remote jobs, but interactive access depends on the remote
+  pool allowing worker connections.
+
+[Validation evidence](STATUS.md) · [Test plan](TESTING.md) ·
+[HTCondor Job Router](https://htcondor.readthedocs.io/en/main/grid-computing/job-router.html)

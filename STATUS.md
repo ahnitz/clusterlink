@@ -12,13 +12,17 @@ successfully ran the installed PyCBC entry point and plotting jobs. No cluster
 service or administrator configuration was changed.
 
 The original `su` scheduler recovered; its old allocations have been reconciled
-and cancellation completed. Both Syracuse routes are enabled. OSG remains enrolled
-but is disabled for new jobs while new SSH connections time out. Existing native
-jobs were tracked to completion/removal; no remote identity was discarded.
+and cancellation completed. All three routes are enabled. OSG temporarily stopped accepting new SSH
+connections, then recovered; the package's existing nonprompting login path worked
+again and deferred cache releases drained successfully. Existing native jobs
+were tracked to completion/removal; no remote identity was discarded.
 
 The workflow resumed as root DAG 623 from rescue checkpoint 003. Nine singles
-child DAGs are complete. The 305-node injection follow-up DAG is running, with
-its missing frame inputs repaired using the selected cache records. The main
+child DAGs are complete. The 305-node injection follow-up DAG has passed 51 nodes without new failures
+after repairing its missing frame inputs from the selected cache records. A fresh
+75-job foreground workflow was also generated: all 45 strain-reading jobs declare
+the expected two frame inputs. Syracuse queue limits were raised through the
+new `site limits` command to 20 total / 10 idle jobs per site. The main
 workflow has 236 completed nodes. Two foreground generators require another
 checkpoint retry: their first local wrappers lacked Pegasus's success footer;
 the next attempt encountered configuration files left by that successful first
@@ -46,11 +50,12 @@ archives immutable and avoiding repeated cross-cache checksum reads.
   directories; the portable-Python enrollment path completed a remote job.
 - Failed applications returned nonzero status and stderr without a missing-output
   transfer hold. Cache budget/lease/eviction/corruption behavior has unit coverage.
-- All 36 unit tests pass. The distributable wheel builds successfully.
+- All 38 unit tests pass. The distributable wheel builds successfully.
 
 The head-node helper RSS snapshot was about 18 MiB on su and 20 MiB on osg.
-Owned storage was 2.80 GB and 2.50 GB, with cached environments accounting for
-2.56 GB and 2.34 GB respectively. These are snapshots, not peak or quota guarantees.
+Recent owned-storage snapshots were 3.12 GB on su, 1.88 GB on su2, and
+2.36 GB on osg; cached environments account for 2.56 GB, 0.68 GB, and 2.34 GB
+respectively. These are snapshots, not peak or quota guarantees.
 
 ## Scientific acceptance evidence
 

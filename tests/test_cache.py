@@ -65,6 +65,19 @@ class CacheTests(unittest.TestCase):
         self.assertEqual(remote.cache_signature(linked), before)
         self.assertTrue((self.root / 'verified' / digest).exists())
 
+    def test_lru_uses_access_metadata_without_touching_archives(self):
+        first, _ = self.upload(b'abcd')
+        second, _ = self.upload(b'efgh')
+        self.call('release', first, self.lease)
+        self.call('release', second, self.lease)
+        os.utime(self.root / 'verified' / first, (10, 10))
+        os.utime(self.root / 'verified' / second, (20, 20))
+        self.call('check', first, self.lease)
+        self.call('release', first, self.lease)
+        self.upload(b'ijkl')
+        self.assertTrue((self.root / 'cache' / (first + '.tar.gz')).exists())
+        self.assertFalse((self.root / 'cache' / (second + '.tar.gz')).exists())
+
     def test_duplicate_upload_does_not_require_double_capacity(self):
         digest, _ = self.upload(b'12345678')
         result = self.call('upload', digest, 8, self.lease, payload=b'12345678')

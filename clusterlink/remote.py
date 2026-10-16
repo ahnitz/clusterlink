@@ -91,7 +91,7 @@ def install(root, settings, scripts):
     p = probe()
     portable = (root / 'helpers.json').exists()
     if not portable and (not p["commands"]["blahpd"] or not p["commands"]["condor_ft-gahp"]):
-        raise RuntimeError("Native BLAHP/file-transfer helpers unavailable; portable helper deployment not yet implemented")
+        raise RuntimeError("Native BLAHP/file-transfer helpers unavailable; enroll with --helpers portable")
     if root.exists() and not (root / "owner.json").exists():
         raise RuntimeError("Refusing to adopt an unmarked existing remote directory")
     root.mkdir(mode=0o700, parents=True, exist_ok=True)

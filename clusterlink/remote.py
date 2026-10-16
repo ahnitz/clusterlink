@@ -136,6 +136,9 @@ def install(root, settings, scripts):
             link.symlink_to("../libexec", target_is_directory=True)
     config = (root / 'glite/etc/blah.config' if portable else Path('/etc/blah.config')).read_text()
     config += f'\nblah_libexec_directory="{root}/glite/libexec"\nblah_sbin_directory="{source}"\nblah_temp_dir="{root}/tmp"\nblah_shared_directories=/\nblah_run_in_workdir=yes\nblah_max_threaded_cmds=4\n'
+    # Allow a busy scheduler longer than BLAHP's 30-second silent-command
+    # default, while remaining below the private GridManager's 180s deadline.
+    config += 'blah_child_poll_timeout=120\n'
     (root / "glite/etc/blah.config").write_text(config)
     (root / "glite/etc/condor_config.ft-gahp").write_text(
         f"BOSCO_SANDBOX_DIR = {root}/sandbox\nLOG = {root}/glite/log\nFT_GAHP_LOG = $(LOG)/FTGahpLog\n"

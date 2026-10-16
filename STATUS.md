@@ -18,7 +18,7 @@ again and deferred cache releases drained successfully. Existing native jobs
 were tracked to completion/removal; no remote identity was discarded.
 
 The workflow resumed as root DAG 623 from rescue checkpoint 003. Nine singles
-child DAGs are complete. The 305-node injection follow-up DAG has passed 51 nodes without new failures
+child DAGs are complete. The 305-node injection follow-up DAG has passed 140 nodes without new failures
 after repairing its missing frame inputs from the selected cache records. A fresh
 75-job foreground workflow was also generated: all 45 strain-reading jobs declare
 the expected two frame inputs. Syracuse queue limits were raised through the
@@ -50,7 +50,7 @@ archives immutable and avoiding repeated cross-cache checksum reads.
   directories; the portable-Python enrollment path completed a remote job.
 - Failed applications returned nonzero status and stderr without a missing-output
   transfer hold. Cache budget/lease/eviction/corruption behavior has unit coverage.
-- All 38 unit tests pass. The distributable wheel builds successfully.
+- All 39 unit tests pass. The distributable wheel builds successfully.
 
 The head-node helper RSS snapshot was about 18 MiB on su and 20 MiB on osg.
 Recent owned-storage snapshots were 3.12 GB on su, 1.88 GB on su2, and
@@ -119,3 +119,14 @@ The su2 installed-command acceptance job (local 389, remote 49374612) returned
 there also passed. All nine singles child DAGs completed. The main DAG reached
 197 completed nodes; the two corrected foreground generators still need a
 checkpoint retry. Their corrected log format passes Pegasus's exit-code checker.
+
+## Busy-scheduler submission recovery
+
+A su2 submission (source 863 / grid 869) hit BLAHP's 30-second silent-command
+timeout. Its unique sandbox identity was absent from both the remote queue and
+recent history before both local entries were released. It then acquired remote
+ID 49377298 and ran. This was an explicit reconciled retry, not automatic failover.
+Enrollment now sets `blah_child_poll_timeout=120`, below the private GridManager's
+180-second deadline. Existing private remote configurations were updated for their
+next helper start; in-flight helpers were not restarted. The setting's seconds
+conversion was checked in [upstream BLAHP](https://github.com/htcondor/BLAH/blob/devel/src/mapped_exec.c).

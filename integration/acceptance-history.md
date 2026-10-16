@@ -200,3 +200,9 @@ its original Requirements with the previously stalled worker excluded. These
 are operator-directed retries, not automatic cross-site failover. The five OSG
 sources were released after the terminal-state check, and 1269 after the su2
 history check. All 39 package regression tests still pass.
+
+The su retry of source 1201 (remote 59271317) landed on the same stalled
+OG-NODE-10-5-255-134 worker seen through su2. After another pre-execution stall,
+it was held again and given a test-only worker exclusion. Remote queue absence
+and removed state (3) in history were confirmed before release. The other five
+foreground-tail retries completed on su; no application changes were needed.

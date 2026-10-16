@@ -1,7 +1,7 @@
 # Clusterlink acceptance status — 2026-10-15
 
 The package works across both enrolled HTCondor sites. The complete PyCBC
-acceptance workflow is **not finished**: 141/252 main nodes are complete, with
+acceptance workflow is **not finished**: 197/252 main nodes are complete, with
 follow-up workflows and final HTML assembly still pending.
 
 ## Current recovery
@@ -37,7 +37,7 @@ their remote IDs. No cluster service or administrator configuration was changed.
   directories; the portable-Python enrollment path completed a remote job.
 - Failed applications returned nonzero status and stderr without a missing-output
   transfer hold. Cache budget/lease/eviction/corruption behavior has unit coverage.
-- All 32 unit tests pass. The distributable wheel builds successfully.
+- All 33 unit tests pass. The distributable wheel builds successfully.
 
 The head-node helper RSS snapshot was about 18 MiB on su and 20 MiB on osg.
 Owned storage was 2.80 GB and 2.50 GB, with cached environments accounting for
@@ -99,3 +99,9 @@ looks for identical immutable archives in visible enrolled roots under the same
 remote home. It verifies checksums, enforces destination budgets, and uses hard
 links when supported; separate filesystems fall back to upload. The su and su2
 archive paths were verified to share inode 61148753, size 675206181 bytes.
+
+The su2 installed-command acceptance job (local 389, remote 49374612) returned
+`PyCBC version: 0.0a1`, exit zero, and empty stderr. Three PyCBC plotting jobs
+there also passed. All nine singles child DAGs completed. The main DAG reached
+197 completed nodes; the two corrected foreground generators still need a
+checkpoint retry. Their corrected log format passes Pegasus's exit-code checker.

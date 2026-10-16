@@ -33,8 +33,7 @@ python integration/pycbc/prepare.py --source local/pycbc-source \
 ```
 
 The complete workflow has been planned and submitted. It has not yet passed.
-See [STATUS.md](../../STATUS.md) for verified stages and the current remote
-scheduler outage blocking completion.
+See [STATUS.md](../../STATUS.md) for verified stages, alternate-host recovery, and remaining validation.
 
 Portability fix during acceptance: pip initially selected a glibc 2.34 build of
 cryptography and locally compiled SQLAlchemy C extensions needing glibc 2.38.

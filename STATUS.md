@@ -1,26 +1,35 @@
 # Clusterlink acceptance status — 2026-10-15
 
 The package works across both enrolled HTCondor sites. The complete PyCBC
-acceptance workflow is **not finished**: 197/252 main nodes are complete, with
+acceptance workflow is **not finished**: 236/252 main nodes are complete, with
 follow-up workflows and final HTML assembly still pending.
 
 ## Current recovery
 
-The `su` scheduler became unreachable during the test. SSH still works, but
-its advertised `10.5.0.107:9618` endpoint has no listening socket. Native
-GridManager reports the resource down. Two old remote allocations remain tracked for cancellation when that scheduler returns:
+The suggested `sugwg-login2` host was enrolled as `su2` through the normal
+CLI with a 5 GB cache and 10 GB owned-storage budget. Its independent scheduler
+successfully ran the installed PyCBC entry point and plotting jobs. No cluster
+service or administrator configuration was changed.
 
-| Local source | Routed job | Remote su job | Purpose |
-| --- | --- | --- | --- |
-| 277 | 380 | 59270318 | Exclude-zero-lag analysis dependency |
-| 315 | 336 | 59270215 | IFAR report fragment |
+The original `su` scheduler recovered; its old allocations have been reconciled
+and cancellation completed. Both Syracuse routes are enabled. OSG remains enrolled
+but is disabled for new jobs while new SSH connections time out. Existing native
+jobs were tracked to completion/removal; no remote identity was discarded.
 
-The suggested `sugwg-login2` host has a healthy, separate scheduler and shared
-home storage. It was enrolled as `su2` through the normal CLI with a 5 GB cache
-and 10 GB owned-storage budget. The original `su` route is disabled for new jobs.
-PyCBC resumed from rescue checkpoint 002 with 141 completed main nodes preserved;
-new jobs route to su2 or OSG. The old routed jobs are marked for removal and retain
-their remote IDs. No cluster service or administrator configuration was changed.
+The workflow resumed as root DAG 623 from rescue checkpoint 003. Nine singles
+child DAGs are complete. The 305-node injection follow-up DAG is running, with
+its missing frame inputs repaired using the selected cache records. The main
+workflow has 236 completed nodes. Two foreground generators require another
+checkpoint retry: their first local wrappers lacked Pegasus's success footer;
+the next attempt encountered configuration files left by that successful first
+execution. The footer is fixed and prior generated configuration files preserved
+under backup names so the retry can regenerate them.
+
+Cache cleanup now writes durable local release records and delivers them with
+the next preparation/status/cache contact. An unavailable SSH endpoint therefore
+does not delay completed-job reporting; cached objects remain pinned until release
+is acknowledged. Cache hits update separate LRU metadata, keeping hard-linked
+archives immutable and avoiding repeated cross-cache checksum reads.
 
 ## Verified behavior
 
@@ -37,7 +46,7 @@ their remote IDs. No cluster service or administrator configuration was changed.
   directories; the portable-Python enrollment path completed a remote job.
 - Failed applications returned nonzero status and stderr without a missing-output
   transfer hold. Cache budget/lease/eviction/corruption behavior has unit coverage.
-- All 33 unit tests pass. The distributable wheel builds successfully.
+- All 36 unit tests pass. The distributable wheel builds successfully.
 
 The head-node helper RSS snapshot was about 18 MiB on su and 20 MiB on osg.
 Owned storage was 2.80 GB and 2.50 GB, with cached environments accounting for

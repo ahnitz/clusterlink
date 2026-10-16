@@ -83,6 +83,14 @@ paths in fresh patches naturally refer to the new project.
 
 ## Evidence
 
+The [fresh SIF acceptance run](sif-acceptance.json) completed all 15 DAGs with
+zero manual interventions, no rescue restarts, and seven native DAGMan retry
+events. Scientific validation passed for 434 templates, 68 injections, and all
+six trigger datasets. Report validation checked 166 HTML files, 334 PNG assets,
+and 4,483 local references. Both remote caches finished with zero active leases.
+The later [storage-location regression](storage-location-regression.json) covers
+the native-helper temporary-directory fix with two successful SU jobs.
+
 The earlier Conda-archive run completed with manual recovery. That history is
 preserved in [the earlier report](../acceptance-before-sif.md). It is not the
 fresh unattended SIF acceptance result. A subsequent full SIF development run

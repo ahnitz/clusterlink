@@ -1,0 +1,26 @@
+{
+  "purpose": "Native helper temporary storage under an explicitly enrolled remote directory",
+  "remote_directory": "/home/ahnitz/.clusterlink/storage-location-regression",
+  "project_id": "03499a9ac13c4ddc955067316e36ee8e",
+  "helper_environment": {
+    "GAHP_TEMP": "/home/ahnitz/.clusterlink/storage-location-regression/tmp",
+    "TMPDIR": "/home/ahnitz/.clusterlink/storage-location-regression/tmp",
+    "BLAHPD_CONFIG_LOCATION": "/home/ahnitz/.clusterlink/storage-location-regression/glite/etc/blah.config"
+  },
+  "observed_status_cache": "/home/ahnitz/.clusterlink/storage-location-regression/tmp/cache..",
+  "first_probe": {
+    "local_job": 1,
+    "remote_job": 59279106,
+    "exit_code": 0
+  },
+  "tests_passed": 50,
+  "diagnosis": "The SU native BLAHP binary contains GAHP_TEMP but neither TMPDIR nor blah_temp_dir. The native condor_status.sh uses GAHP_TEMP explicitly. Missing GAHP_TEMP let native helper files use unintended locations.",
+  "full_pycbc_run_modified": false,
+  "second_probe": {
+    "local_job": 2,
+    "remote_job": 59279137,
+    "exit_code": 0,
+    "runtime_seconds": 60
+  },
+  "integrated_after_full_acceptance": true
+}

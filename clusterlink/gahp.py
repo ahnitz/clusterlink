@@ -22,7 +22,8 @@ def main():
     options = []
     if command == "blahpd":
         argv = ["env", "LD_LIBRARY_PATH=" + glite + '/lib', "BLAHPD_LOCATION=" + glite, "GLITE_LOCATION=" + glite,
-                "TMPDIR=" + root + "/tmp", glite + "/bin/blahpd"]
+                "BLAHPD_CONFIG_LOCATION=" + glite + "/etc/blah.config",
+                "GAHP_TEMP=" + root + "/tmp", "TMPDIR=" + root + "/tmp", glite + "/bin/blahpd"]
     elif command == "condor_ft-gahp":
         # Follow remote_gahp's reverse SSH forwarding convention. The helper
         # can reach the local GridManager through this tunnel, not a public port.
@@ -32,7 +33,7 @@ def main():
         port = random.SystemRandom().randrange(32768, 61000)
         options = ["-o", "ExitOnForwardFailure=yes", "-R", f"{port}:{address.group(1)}"]
         argv = ["env", "LD_LIBRARY_PATH=" + glite + '/lib', "CONDOR_CONFIG=" + glite + "/etc/condor_config.ft-gahp",
-                "TMPDIR=" + root + "/tmp", glite + "/bin/condor_ft-gahp", "-f"]
+                "GAHP_TEMP=" + root + "/tmp", "TMPDIR=" + root + "/tmp", glite + "/bin/condor_ft-gahp", "-f"]
         print(f"Allocated port {port} for remote forward to", file=sys.stderr, flush=True)
     else:
         raise ValueError("Unsupported native helper")

@@ -1,89 +1,51 @@
 # Clusterlink acceptance status
 
-## Current acceptance work
+## Completed fresh SIF acceptance
 
-The first fresh SIF attempt in `local/pycbc-clean-run` was submitted once as
-root job 1. It reached 29 completed main nodes before the injection-SNR merge
-failed during Apptainer extraction on OSG worker `nal-005-docker`: a nested
-container could not mount a separate devpts instance. User namespaces were
-advertised, but that alone did not establish support for this extra mount.
-The failed run was canceled and its logs retained; it is not an acceptance pass.
+The fresh project `local/pycbc-acceptance` completed its full PyCBC mini search
+across SU and OSG on 2026-10-16. It was initialized/enrolled through the normal
+CLI, built its own environment image, and submitted once. All 15 DAGs succeeded
+with **zero manual interventions**, no rescue restarts, and seven native DAGMan
+retry events. The runtime and environment remained unchanged during execution.
+The empty private manager was stopped after collecting evidence.
 
-The launcher now disables devpts in its extracted private runtime configuration,
-covering both the internal extractor and payload. This changes no host settings.
-General OSG and affected-worker regression probes passed. The targeted job
-(local 73, remote 16043293) returned valid PyCBC numerical results with exit zero
-on `nal-005-docker`. A second fresh project, `local/pycbc-clean-run2`, was submitted once as root job 1 at 00:20 local time on 2026-10-16,
-with two native DAGMan retries configured before submission. That development run was then stopped after H1 and L1 full-data inspiral jobs
-passed, because a wrapper review found that `--cleanenv` discarded native
-scheduler CPU-thread limits. The launcher now preserves those limits and GPU
-visibility masks through Apptainer, retaining explicit Apptainer overrides.
-Allocation/override probes passed on both su and osg: two requested CPUs
-produced OpenMP/OpenBLAS limits of two inside the SIF, while an explicit MKL
-override remained one. `local/pycbc-final-run` was submitted once as root job 1 at 00:52 local time
-on 2026-10-16. Its native policy allows two DAGMan retries and caps each remote
-job at one hour including startup. The predeclared worker requirement excludes
-the one stalled Syracuse worker. At 01:25 a remote coincidence job was held, exposing the inherited Pegasus
-12-hour held-job timeout. The private manager then received a native
-120-second held-job removal policy. Job Router requeued the source onto su;
-this is native rerouting, distinct from the earlier DAGMan payload retry. This run is now a
-development run with one recorded intervention, not unattended acceptance.
-The preparation helper now installs that policy before planning future runs.
-A fresh project, `local/pycbc-unattended` (ID
-`2f6b6ab1e0e94ec9ab06ed1ff00503c1`), was submitted once at 01:34:58 local time
-on 2026-10-16 with the two-minute held-job timeout installed before image
-build and planning. It later reached the same hook-capture cap and received
-one recorded configuration intervention; it is also development evidence.
-A later development job exposed HTCondor's default 10 KiB hook-output capture
-limit. Generated project configuration now raises `JOB_ROUTER.PIPE_BUFFER_MAX`
-to 16 MiB. The development pool was reconfigured for a live regression; the
-hook implementation itself required no changes. The second project later
-reached the same cap, confirming that the larger native capture setting must
-be present from initialization.
-The formerly rejected job (local 617, remote OSG 16043515) then completed
-with exit zero; see `integration/pycbc/hook-output-regression.json`.
-The development run `local/pycbc-unattended` has now completed all 15 DAGs.
-Scientific and report validation passed: 434 templates, 68 injections, all six
-trigger datasets, 166 HTML files, 334 PNG files, and 4,483 local references.
-Its one configuration intervention remains recorded; this is development evidence
-in `integration/pycbc/sif-development-completion.json`.
+[Full acceptance evidence](integration/pycbc/sif-acceptance.json) records source,
+image, environment, configuration and implementation identities, native attempt
+outcomes, retry events, and validation results:
 
-The older `pycbc-final-run` was stopped after its experimental system removal
-policy deleted source job 1070 without a terminal event reaching DAGMan; its
-remaining DAGs were stale, with no scientific jobs queued. This policy is not
-part of generated Clusterlink configuration. The completed development run also
-retained one cache lease from a rejected pre-fix hook translation; it is recorded
-as a cleanup limitation, not an active scientific job.
+- 434 templates, 68 injections, six finite nonempty trigger datasets.
+- 166 HTML files, 334 PNG assets, 4,483 local references checked. The upstream
+  unconfigured Pegasus dashboard placeholder is reported separately.
+- 565 grid attempts completed with exit zero (377 SU, 188 OSG). Other grid
+  records include seven removals and one exit 255; grid removals/rerouting and
+  DAGMan retry counts describe different events and should not be combined.
+- One environment artifact throughout; no hook-output truncations.
+- Both caches contain one 751,755,770-byte bundle and have zero active leases.
 
-A new project, `local/pycbc-acceptance` (ID
-`6833f52e85db4427bb924011f218fc76`), was initialized and enrolled using the normal
-CLI, built its own SIF, and submitted once at 09:11:33 local time on 2026-10-16.
-The hook capture cap and native retry/timeout settings were present before
-submission. It is running with zero operator interventions so far. All six inspiral jobs
-succeeded, and staged scientific outputs passed validation (434 templates,
-68 injections, six finite nonempty trigger datasets). The nine singles DAGs and
-both foreground/background DAGs have completed. Native retries recovered from
-SU scheduler connectivity/storage failures; the injection follow-up is still
-running. These are not yet full acceptance results.
+Retries recovered worker container incompatibility and scheduler/storage
+failures. This establishes an unattended end-to-end result, not failure-free
+infrastructure or equivalence to a reference scientific analysis.
 
-The SU login node's root filesystem became full while home storage retained
-about 5.4 TB free. Investigation found its older BLAHP binary honors `GAHP_TEMP`
-but not the newer `blah_temp_dir`/`TMPDIR` controls. A fix explicitly setting
-`GAHP_TEMP` and the project BLAHP config path is prepared separately in
-`local/storage-fix` to avoid changing the active acceptance runtime. Fifty tests
-pass there, including an actual native status-helper regression. Two isolated
-SU grid probes exited zero using a custom `--remote-dir`, and the native status
-cache was observed inside that directory. The fix will be integrated after the
-active run; it is not yet part of the tracked runtime.
-No successful unattended full run is claimed yet.
+## Remote storage correction
 
-The test launcher also needed a Bash invocation fix before the first submission;
-the unused preflight plan is retained separately and submitted no jobs.
+Enrollment accepts `--remote-dir /absolute/dedicated/project/path`; the default
+is a unique directory under the remote home. The native helper now receives
+`GAHP_TEMP`, `TMPDIR`, and an explicit `BLAHPD_CONFIG_LOCATION`, so its submission
+and status files use that enrolled directory. Older SU BLAHP binaries ignored
+the newer temporary-directory controls; a full login-node root filesystem
+exposed the gap even though home storage had ample space.
 
-The acceptance criterion is one submission reaching root-DAG success, all
-follow-up workflows completing, and scientific-output validation passing,
-without operator releases, resubmissions, or configuration edits during the run.
-Native Pegasus/DAGMan retries are allowed and will be reported.
+This correction was integrated **after** the unchanged full workflow completed.
+[Two isolated SU jobs](integration/pycbc/storage-location-regression.json) passed
+with a custom enrolled path, and the native status cache was observed there.
+A regression invokes the actual installed native status script. This redirects
+Clusterlink's helpers; it does not relocate every internal file of a remote
+scheduler or supply worker-local disk.
+
+Earlier development failures and interventions remain documented in
+[development completion evidence](integration/pycbc/sif-development-completion.json)
+and Git history. One older pre-fix development run retained an orphaned cache
+lease after a rejected hook translation; the fresh acceptance run did not.
 
 ## Verified SIF and project behavior
 
@@ -103,8 +65,9 @@ Native Pegasus/DAGMan retries are allowed and will be reported.
   disallowed user namespaces. Its empty output is **not** a successful result.
   Both pools advertise `HasUserNamespaces`; the fresh test site uses the native
   requirement `TARGET.HasUserNamespaces =?= True`.
-- All 49 unit tests passed before the fresh run; regression coverage includes
-  native submission-option preservation and Pegasus Python inside the SIF.
+- All 50 tests pass after integrating the storage fix, and the installable wheel
+  builds successfully. Coverage includes native submission-option preservation,
+  Pegasus Python inside the SIF, and native-helper temporary storage.
 
 The earlier full PyCBC Conda-archive run completed, but required manual
 interventions. Its detailed evidence is preserved in
@@ -112,6 +75,10 @@ interventions. Its detailed evidence is preserved in
 [chronological history](integration/acceptance-history.md).
 
 ## Remaining limits
+
+Campaigns of 20–30k jobs have not been benchmarked. Per-job fingerprinting, bundle
+hashing, SSH cache checks, and staging have measurable overhead; see the bounded
+[scale validation plan](TESTING.md#scale-validation-still-required).
 
 Remote HTCondor is tested. Slurm enrollment and routing exist, but no Slurm
 account has been supplied; cached delivery is Condor-only. Native Slurm extra

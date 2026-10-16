@@ -1,0 +1,326 @@
+{
+  "classification": "completed fresh unattended SIF acceptance",
+  "recorded_utc": "2026-10-16T15:55:01.778201+00:00",
+  "identity": {
+    "project_id": "6833f52e85db4427bb924011f218fc76",
+    "implementation_commit": "66587f6e28010bfe669f83d1072718072a3cd49f",
+    "source_branch": "firinspiral3-multidet-asym",
+    "source_commit": "6c67f3fd2ee6e347f44be081ba150f420219ebfa",
+    "root_job": 1,
+    "submitted_local": "2026-10-16T09:11:33-04:00",
+    "image_sha256": "82869a3609724fc97e4bea68b6b8abefcd4ed2a81e0a1cead3e30fc835392609",
+    "sif_sha256": "6876370211dcd15e29fd0ba91882e7e7c6467ae235c905b2458bb3d8fac30442",
+    "native_dagman_retries": 2,
+    "native_remote_wall_seconds": 3600,
+    "native_held_timeout_seconds": 120,
+    "worker_requirements": "(TARGET.HasUserNamespaces =?= True) && TARGET.Machine =!= \"OG-NODE-10-5-255-134\"",
+    "manual_job_interventions": 0,
+    "completion_verified": true,
+    "native_hook_output_cap_bytes": 16777216,
+    "pool_config_sha256": "f8baea5f29f8ed463f124f02d4fd0a590d43077ac3f3e2efaf388326ab1c7436"
+  },
+  "environment": {
+    "backend": "sif",
+    "base": "docker://fedora:43",
+    "runtime_version": "1.5.4",
+    "environment_prefix": "/opt/clusterlink/env",
+    "rootfs_bytes": 2082011795,
+    "source": "/home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/pycbc-acceptance/.env",
+    "fingerprint": "55ade8f7600ecee32e5290c036b3b7b89d9ecabc145bfdc6ca4a500820dd7134",
+    "sif_sha256": "6876370211dcd15e29fd0ba91882e7e7c6467ae235c905b2458bb3d8fac30442",
+    "sha256": "82869a3609724fc97e4bea68b6b8abefcd4ed2a81e0a1cead3e30fc835392609"
+  },
+  "validation": {
+    "workflow_complete": true,
+    "triggers": [
+      {
+        "category": "full_data",
+        "ifo": "H1",
+        "count": 429372,
+        "max_snr": 9.695322036743164
+      },
+      {
+        "category": "full_data",
+        "ifo": "L1",
+        "count": 392571,
+        "max_snr": 13.973580360412598
+      },
+      {
+        "category": "full_data",
+        "ifo": "V1",
+        "count": 360241,
+        "max_snr": 12.578021049499512
+      },
+      {
+        "category": "BBH_coinc",
+        "ifo": "H1",
+        "count": 79122,
+        "max_snr": 67.83956909179688
+      },
+      {
+        "category": "BBH_coinc",
+        "ifo": "L1",
+        "count": 65946,
+        "max_snr": 115.25776672363281
+      },
+      {
+        "category": "BBH_coinc",
+        "ifo": "V1",
+        "count": 68888,
+        "max_snr": 28.809917449951172
+      }
+    ],
+    "dags": [
+      {
+        "name": "gw-finalization.dag.metrics",
+        "nodes": 3,
+        "jobs_failed": 0,
+        "rescue_dag_number": 0
+      },
+      {
+        "name": "H1-SINGLES_MINIFOLLOWUP_FULL_DATA_ALL-1186740100-3400.dag.metrics",
+        "nodes": 1,
+        "jobs_failed": 0,
+        "rescue_dag_number": 0
+      },
+      {
+        "name": "H1-SINGLES_MINIFOLLOWUP_FULL_DATA_NONCOINC-1186740100-3400.dag.metrics",
+        "nodes": 1,
+        "jobs_failed": 0,
+        "rescue_dag_number": 0
+      },
+      {
+        "name": "H1-SINGLES_MINIFOLLOWUP_FULL_DATA_VETOED-1186740100-3400.dag.metrics",
+        "nodes": 1,
+        "jobs_failed": 0,
+        "rescue_dag_number": 0
+      },
+      {
+        "name": "H1L1V1-FOREGROUND_MINIFOLLOWUP_FULL_DATA_BACKGROUND-1186740100-3400.dag.metrics",
+        "nodes": 103,
+        "jobs_failed": 0,
+        "rescue_dag_number": 0
+      },
+      {
+        "name": "H1L1V1-FOREGROUND_MINIFOLLOWUP_FULL_DATA_FOREGROUND-1186740100-3400.dag.metrics",
+        "nodes": 100,
+        "jobs_failed": 0,
+        "rescue_dag_number": 0
+      },
+      {
+        "name": "H1L1V1-INJECTION_MINIFOLLOWUP_BBH-1186740100-3400.dag.metrics",
+        "nodes": 311,
+        "jobs_failed": 0,
+        "rescue_dag_number": 0
+      },
+      {
+        "name": "L1-SINGLES_MINIFOLLOWUP_FULL_DATA_ALL-1186740100-3400.dag.metrics",
+        "nodes": 1,
+        "jobs_failed": 0,
+        "rescue_dag_number": 0
+      },
+      {
+        "name": "L1-SINGLES_MINIFOLLOWUP_FULL_DATA_NONCOINC-1186740100-3400.dag.metrics",
+        "nodes": 1,
+        "jobs_failed": 0,
+        "rescue_dag_number": 0
+      },
+      {
+        "name": "L1-SINGLES_MINIFOLLOWUP_FULL_DATA_VETOED-1186740100-3400.dag.metrics",
+        "nodes": 1,
+        "jobs_failed": 0,
+        "rescue_dag_number": 0
+      },
+      {
+        "name": "V1-SINGLES_MINIFOLLOWUP_FULL_DATA_ALL-1186740100-3400.dag.metrics",
+        "nodes": 1,
+        "jobs_failed": 0,
+        "rescue_dag_number": 0
+      },
+      {
+        "name": "V1-SINGLES_MINIFOLLOWUP_FULL_DATA_NONCOINC-1186740100-3400.dag.metrics",
+        "nodes": 1,
+        "jobs_failed": 0,
+        "rescue_dag_number": 0
+      },
+      {
+        "name": "V1-SINGLES_MINIFOLLOWUP_FULL_DATA_VETOED-1186740100-3400.dag.metrics",
+        "nodes": 1,
+        "jobs_failed": 0,
+        "rescue_dag_number": 0
+      },
+      {
+        "name": "gw-main.dag.metrics",
+        "nodes": 247,
+        "jobs_failed": 0,
+        "rescue_dag_number": 0
+      },
+      {
+        "name": "gw.dax-0.dag.metrics",
+        "nodes": 4,
+        "jobs_failed": 0,
+        "rescue_dag_number": 0
+      }
+    ],
+    "no_rescue_restarts": true,
+    "templates": 434,
+    "injections": 68,
+    "html": {
+      "index_bytes": 128262,
+      "html_files": 166,
+      "png_files": 334,
+      "local_references_checked": 4483,
+      "unconfigured_dashboard_placeholders": [
+        "9._workflow/PEGASUS_DASHBOARD_URL"
+      ]
+    }
+  },
+  "native_grid_attempts": [
+    {
+      "site": "osg",
+      "status": 3,
+      "exit": 0,
+      "count": 1
+    },
+    {
+      "site": "osg",
+      "status": 3,
+      "exit": null,
+      "count": 1
+    },
+    {
+      "site": "osg",
+      "status": 4,
+      "exit": 0,
+      "count": 188
+    },
+    {
+      "site": "osg",
+      "status": 4,
+      "exit": 255,
+      "count": 1
+    },
+    {
+      "site": "su",
+      "status": 3,
+      "exit": null,
+      "count": 5
+    },
+    {
+      "site": "su",
+      "status": 4,
+      "exit": 0,
+      "count": 377
+    }
+  ],
+  "native_dag_retry_events": [
+    {
+      "dag": "gw-main.dag.dagman.out",
+      "event": "10/16/26 09:15:24 Retrying node calculate_psd_ID38_ID0000043 (retry #1 of 2)..."
+    },
+    {
+      "dag": "gw-main.dag.dagman.out",
+      "event": "10/16/26 09:38:36 Retrying node coinc_ID15_ID0000018 (retry #1 of 2)..."
+    },
+    {
+      "dag": "H1L1V1-FOREGROUND_MINIFOLLOWUP_FULL_DATA_BACKGROUND-1186740100-3400.dag.dagman.out",
+      "event": "10/16/26 10:50:07 Retrying node plot_qscan_ID10_ID0000028 (retry #1 of 2)..."
+    },
+    {
+      "dag": "H1L1V1-FOREGROUND_MINIFOLLOWUP_FULL_DATA_BACKGROUND-1186740100-3400.dag.dagman.out",
+      "event": "10/16/26 10:54:07 Retrying node plot_qscan_ID10_ID0000028 (retry #2 of 2)..."
+    },
+    {
+      "dag": "H1L1V1-FOREGROUND_MINIFOLLOWUP_FULL_DATA_FOREGROUND-1186740100-3400.dag.dagman.out",
+      "event": "10/16/26 10:49:05 Retrying node plot_singles_timefreq_ID9_ID0000059 (retry #1 of 2)..."
+    },
+    {
+      "dag": "H1L1V1-FOREGROUND_MINIFOLLOWUP_FULL_DATA_FOREGROUND-1186740100-3400.dag.dagman.out",
+      "event": "10/16/26 10:49:05 Retrying node single_template_plot_ID4_ID0000037 (retry #1 of 2)..."
+    },
+    {
+      "dag": "H1L1V1-FOREGROUND_MINIFOLLOWUP_FULL_DATA_FOREGROUND-1186740100-3400.dag.dagman.out",
+      "event": "10/16/26 10:52:09 Retrying node plot_singles_timefreq_ID9_ID0000059 (retry #2 of 2)..."
+    }
+  ],
+  "environment_stability": {
+    "fingerprint_unchanged": true,
+    "artifact_count": 1
+  },
+  "hook_truncation_messages": 0,
+  "final_status": {
+    "state_directory": "/home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/pycbc-acceptance/.clusterlink",
+    "project": {
+      "id": "6833f52e85db4427bb924011f218fc76",
+      "root": "/home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/pycbc-acceptance"
+    },
+    "environment": {
+      "prefix": "/home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/pycbc-acceptance/.env",
+      "backend": "sif",
+      "conda_metadata_present": true,
+      "packaging": "automatic",
+      "artifact": null,
+      "artifact_exists": null,
+      "shell_prefix": null,
+      "shell_matches_selection": null
+    },
+    "pool": {
+      "configured": true,
+      "master_running": true
+    },
+    "sites": [
+      {
+        "ssh": "osg",
+        "scheduler": "condor",
+        "root": "/home/alexander.nitz/.clusterlink/projects/6833f52e85db4427bb924011f218fc76/osg",
+        "max_jobs": 8,
+        "max_idle": 4,
+        "name": "osg",
+        "enabled": true,
+        "limits": {
+          "cache_bytes": 3000000000,
+          "storage_bytes": 8000000000,
+          "reserve_bytes": 1000000000
+        },
+        "remote": {
+          "cache_used_bytes": 751755770,
+          "total_bytes": 754711469,
+          "active_leases": 0,
+          "cache_bytes": 3000000000,
+          "storage_bytes": 8000000000,
+          "reserve_bytes": 1000000000
+        }
+      },
+      {
+        "ssh": "su",
+        "scheduler": "condor",
+        "root": "/home/ahnitz/.clusterlink/projects/6833f52e85db4427bb924011f218fc76/su",
+        "max_jobs": 20,
+        "max_idle": 10,
+        "name": "su",
+        "enabled": true,
+        "limits": {
+          "cache_bytes": 3000000000,
+          "storage_bytes": 12000000000,
+          "reserve_bytes": 1000000000
+        },
+        "remote": {
+          "cache_used_bytes": 751755770,
+          "total_bytes": 916332630,
+          "active_leases": 0,
+          "cache_bytes": 3000000000,
+          "storage_bytes": 12000000000,
+          "reserve_bytes": 1000000000
+        }
+      }
+    ]
+  },
+  "caveats": [
+    "Scientific integrity checks, not equivalence to a reference analysis.",
+    "Native retries recovered worker container incompatibility and scheduler/storage failures; unattended does not mean every attempt succeeded.",
+    "The native-helper GAHP_TEMP correction was tested separately and integrated after this workflow completed.",
+    "Slurm and 20\u201330k-job scaling remain unvalidated."
+  ],
+  "final_status_snapshot": "Collected after queue drain, before stopping the empty private manager.",
+  "private_manager_stopped_after_collection": true
+}

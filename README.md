@@ -6,9 +6,9 @@ automatically builds a SIF container from your environment, prepares remote cach
 and manages private configuration.
 No administrator changes or manual environment variables are required.
 
-**Development prototype.** A full PyCBC SIF workflow has completed across SU and
-OSG, with a documented configuration intervention. A fresh unattended run is
-in progress. See
+**Development prototype.** A fresh full PyCBC SIF workflow completed across SU
+and OSG without manual intervention: all 15 DAGs passed, with seven native retry
+events. See
 [STATUS.md](STATUS.md) for evidence and remaining limitations.
 
 ## Setup once per project
@@ -92,6 +92,8 @@ Logs live in `.clusterlink/log`. Use `clusterlink --help` for other controls.
 
 ## Current limits
 
+- Campaigns of 20–30k jobs and high submission rates have not been benchmarked.
+  Per-job environment checks and staging still have measurable overhead.
 - Remote HTCondor execution is tested. Slurm route generation is untested and
   cached delivery is currently Condor-only.
 - Routing uses native Job Router round robin and queue limits. Automatic

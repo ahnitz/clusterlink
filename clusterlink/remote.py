@@ -1,5 +1,6 @@
 """Self-contained remote enrollment agent; standard library only, no daemon."""
 import fcntl
+import errno
 from contextlib import ExitStack
 import hashlib
 import json
@@ -260,18 +261,33 @@ def main():
         h = hashlib.sha256()
         received = 0
         try:
-            with temp.open("xb") as out:
-                while received < expected:
-                    chunk = input_stream.read(min(1024 * 1024, expected - received))
-                    if not chunk:
-                        raise RuntimeError("Incomplete upload")
-                    out.write(chunk)
-                    h.update(chunk)
-                    received += len(chunk)
-                out.flush()
-                os.fsync(out.fileno())
-            if h.hexdigest() != digest:
-                raise RuntimeError("Checksum mismatch")
+            if action == "reuse":
+                # Final cache objects are immutable. A hard link avoids another
+                # full write on shared home storage; eviction only unlinks one
+                # name. Different filesystems fall back to a normal upload.
+                try:
+                    os.link(candidate, temp)
+                except OSError as error:
+                    if error.errno in {errno.EXDEV, errno.EPERM, errno.EOPNOTSUPP}:
+                        print(json.dumps({"cached": False, "reused_bytes": 0}))
+                        return
+                    raise
+                if temp.stat().st_size != expected or checksum(temp) != digest:
+                    raise RuntimeError("Checksum mismatch")
+                received = expected
+            else:
+                with temp.open("xb") as out:
+                    while received < expected:
+                        chunk = input_stream.read(min(1024 * 1024, expected - received))
+                        if not chunk:
+                            raise RuntimeError("Incomplete upload")
+                        out.write(chunk)
+                        h.update(chunk)
+                        received += len(chunk)
+                    out.flush()
+                    os.fsync(out.fileno())
+                if h.hexdigest() != digest:
+                    raise RuntimeError("Checksum mismatch")
             temp.replace(target)
             pin(root, digest, lease)
             remember_verified(root, digest, target)

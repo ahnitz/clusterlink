@@ -75,8 +75,12 @@ class CacheTests(unittest.TestCase):
         self.assertTrue(result['cached'])
         self.assertEqual(result['uploaded_bytes'], 0)
         self.assertEqual(result['reused_bytes'], 8)
+        self.assertEqual((other/'cache'/(digest+'.tar.gz')).stat().st_ino,
+                         (self.root/'cache'/(digest+'.tar.gz')).stat().st_ino)
         self.assertEqual((self.root/'cache'/(digest+'.tar.gz')).read_bytes(), b'12345678')
         self.assertTrue((self.root/'leases'/digest/self.lease).exists())
+        (other/'cache'/(digest+'.tar.gz')).unlink()
+        self.assertTrue(self.call('check', digest, self.lease)['cached'])
 
     def test_reuse_obeys_budget_and_checksums(self):
         other, digest = self.visible_source(b'123456789')

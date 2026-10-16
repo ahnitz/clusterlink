@@ -134,7 +134,7 @@ transfer. On a cache hit the archive does not cross the workstation-to-cluster
 link, but remote Condor still transfers it to each compute sandbox. Large cache
 uploads use an inactivity timeout, allowing a slow transfer to continue while
 bytes are still progressing. If another enrolled cache is visible under the
-remote home directory, an identical archive can be copied there directly after
+remote home directory, an identical immutable archive can be linked directly after
 checksum and storage-budget checks, avoiding another workstation upload. This
 is optional discovery; separate filesystems still work normally.
 

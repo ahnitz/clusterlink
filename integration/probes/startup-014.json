@@ -1,0 +1,159 @@
+{
+  "date": "2026-10-16",
+  "host": "gravity-dev1.syr.edu",
+  "method": "Sequential bounded probes in the isolated enrollment directory; live host load and filesystem caches were not controlled. Each container probe imported NumPy and PyCBC and checked sum(range(5)) == 10. Temporary files removed after benchmark.",
+  "measurements": [
+    {
+      "phase": "gzip_unpack",
+      "seconds": 13.756409851834178,
+      "cpu_seconds": 5.587967000000001,
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "phase": "mount",
+      "seconds": 0.9920442048460245,
+      "cpu_seconds": 3.1892639999999997,
+      "returncode": 0,
+      "stdout": "10\n",
+      "stderr": "PyCBC.libutils: pkg-config call failed, setting NO_PKGCONFIG=1\n"
+    },
+    {
+      "phase": "unsquash",
+      "seconds": 14.418814167380333,
+      "cpu_seconds": 13.393308000000001,
+      "returncode": 0,
+      "stdout": "10\n",
+      "stderr": "INFO:    Converting SIF file to temporary sandbox...\nPyCBC.libutils: pkg-config call failed, setting NO_PKGCONFIG=1\nINFO:    Cleaning up image...\n"
+    },
+    {
+      "phase": "mount",
+      "seconds": 1.0110063590109348,
+      "cpu_seconds": 3.126578999999996,
+      "returncode": 0,
+      "stdout": "10\n",
+      "stderr": "PyCBC.libutils: pkg-config call failed, setting NO_PKGCONFIG=1\n"
+    },
+    {
+      "phase": "unsquash",
+      "seconds": 15.054296139627695,
+      "cpu_seconds": 14.225526,
+      "returncode": 0,
+      "stdout": "10\n",
+      "stderr": "INFO:    Converting SIF file to temporary sandbox...\nPyCBC.libutils: pkg-config call failed, setting NO_PKGCONFIG=1\nINFO:    Cleaning up image...\n"
+    },
+    {
+      "phase": "plain_pack",
+      "seconds": 6.090964479371905,
+      "cpu_seconds": 1.1906350000000003,
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "gzip_bytes": 771557700,
+      "plain_bytes": 879175680
+    },
+    {
+      "phase": "plain_unpack",
+      "seconds": 5.223134499043226,
+      "cpu_seconds": 1.408887,
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "limitations": [
+    "Two samples per container mode; one unpack sample per archive format.",
+    "Not a cold-cache benchmark or an end-to-end workflow speedup claim.",
+    "The uncompressed benchmark archive was made with GNU tar; production converts the existing tar byte stream or uses Python tarfile."
+  ],
+  "native_condorio_probe": {
+    "result": {
+      "token": "startup-014-dev1",
+      "sum": 15.0,
+      "sum_squares": 55.0,
+      "hostname": "gravity-dev1.syr.edu",
+      "python": "/opt/clusterlink/env/bin/python",
+      "prefix": "/opt/clusterlink/env",
+      "glibc": [
+        "glibc",
+        "2.42"
+      ],
+      "pycbc": "0.0a2123",
+      "threads": {
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1"
+      }
+    },
+    "history": [
+      {
+        "ClusterId": 27,
+        "JobUniverse": 5,
+        "JobStatus": 4,
+        "ExitCode": 0
+      },
+      {
+        "ClusterId": 30,
+        "JobUniverse": 9,
+        "JobStatus": 4,
+        "ExitCode": 0
+      }
+    ],
+    "timings": {
+      "bundle_start": 1792190830.494644,
+      "bundle_ready": 1792190841.586729,
+      "container_start": 1792190841.5925245,
+      "payload_start": 1792190841.7438834,
+      "payload_end": 1792190843.392818,
+      "container_end": 1792190843.4194067
+    },
+    "unpack_seconds": 11.092085123062134,
+    "container_setup_seconds": 0.15135884284973145,
+    "payload_seconds": 1.6489346027374268,
+    "stderr": "CLUSTERLINK_TIMING phase=bundle_start epoch=1792190830.494644011\nCLUSTERLINK_TIMING phase=bundle_ready epoch=1792190841.586728981\nCLUSTERLINK_TIMING phase=container_start epoch=1792190841.592524565\nCLUSTERLINK_TIMING phase=payload_start epoch=1792190841.743883371\nPyCBC.libutils: pkg-config call failed, setting NO_PKGCONFIG=1\nCLUSTERLINK_TIMING phase=payload_end epoch=1792190843.392817978\nCLUSTERLINK_TIMING phase=container_end epoch=1792190843.419406562\n"
+  },
+  "fallback_probe": {
+    "returncode": 7,
+    "attempts": [
+      "attempt",
+      "attempt"
+    ],
+    "executions": [
+      "once"
+    ],
+    "stderr": "CLUSTERLINK_TIMING phase=bundle_start epoch=1792191022.444622478\nCLUSTERLINK_TIMING phase=bundle_ready epoch=1792191023.674924460\nCLUSTERLINK_TIMING phase=container_start epoch=1792191023.681708480\nTest-injected mount setup failure\nClusterlink: container setup failed before payload; retrying with SIF extraction\nCLUSTERLINK_TIMING phase=extraction_fallback epoch=1792191023.682999096\nINFO:    Converting SIF file to temporary sandbox...\nCLUSTERLINK_TIMING phase=payload_start epoch=1792191028.826674660\nCLUSTERLINK_TIMING phase=payload_end epoch=1792191028.961972971\nINFO:    Cleaning up image...\nCLUSTERLINK_TIMING phase=container_end epoch=1792191030.744487955\n",
+    "method": "Real bundled Apptainer and SIF, with first setup attempt deliberately returning 42 before invoking Apptainer. Fallback used real --unsquash; payload intentionally returned 7 and ran once."
+  },
+  "other_probes": "dev3 and dev4 native jobs remained idle behind an occupied 12/16-core pool; canceled only these test jobs, without changing their priority or the active workflow.",
+  "tests": 62,
+  "version": "0.1.4",
+  "wheel": "personal_clusterlink-0.1.4-py3-none-any.whl",
+  "final_caches": {
+    "dev1": {
+      "cache_used_bytes": 1651091780,
+      "total_bytes": 1651305588,
+      "active_leases": 0,
+      "cache_bytes": 2000000000,
+      "storage_bytes": 5000000000,
+      "reserve_bytes": 1000000000
+    },
+    "dev3": {
+      "cache_used_bytes": 1631290216,
+      "total_bytes": 1631491035,
+      "active_leases": 0,
+      "cache_bytes": 2000000000,
+      "storage_bytes": 5000000000,
+      "reserve_bytes": 1000000000
+    },
+    "dev4": {
+      "cache_used_bytes": 1631290216,
+      "total_bytes": 1631494448,
+      "active_leases": 0,
+      "cache_bytes": 2000000000,
+      "storage_bytes": 5000000000,
+      "reserve_bytes": 1000000000
+    }
+  }
+}

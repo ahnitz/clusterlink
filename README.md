@@ -79,6 +79,14 @@ download Apptainer, or build SIFs. Source-environment edits take effect at the
 next activation, not during job routing.
 Apptainer installer output is saved in `.clusterlink/install-apptainer.log`.
 
+Workers normally mount the SIF directly. If container setup fails before the
+payload starts, Clusterlink retries setup using extraction; it never retries a
+started payload itself. New delivery bundles omit outer gzip compression, and
+activation converts older bundles without rebuilding their SIF. Disk requests
+still reserve enough space for the extraction fallback. Job stderr includes
+`CLUSTERLINK_TIMING` records for bundle unpacking, container startup, and payload
+execution; native Condor logs report file transfer separately.
+
 For Pegasus, select a vanilla Condor site with CondorIO. The PyCBC site adaptation
 and completed example are documented in [the PyCBC guide](integration/pycbc/README.md).
 Select that site for child workflows too, and generate a fresh workflow plan;

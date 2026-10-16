@@ -1,5 +1,35 @@
 # Clusterlink acceptance status
 
+## Worker startup optimization (0.1.4)
+
+Workers first let the bundled Apptainer runtime mount the SIF. A failed setup
+retries with `--unsquash` only if the container-side wrapper has not started;
+application failures are never replayed by this fallback. Disk reservations
+still cover full extraction. New bundles use an uncompressed tar wrapper around
+the already-compressed SIF and private runtime. Activation converts a verified
+old gzip wrapper without rebuilding its unchanged SIF. Existing compressed
+bundles remain readable. Remote cache object names retain their historical
+`.tar.gz` suffix for protocol compatibility; extraction detects actual content.
+
+`CLUSTERLINK_TIMING` records in job stderr mark bundle unpacking, container setup,
+and payload execution. Native Condor event logs retain transfer timing. This
+adds no user configuration or administrator requirements.
+
+The isolated dev1 benchmark measured 0.99–1.01 s for direct mounting plus
+NumPy/PyCBC imports versus 14.4–15.1 s with extraction. Outer archive unpacking
+fell from 13.8 s to 5.2 s, with about 14% more delivery bytes. These small samples
+ran under live host load with uncontrolled filesystem caching, not a cold-cache
+or full-workflow benchmark. See [startup evidence](integration/probes/startup-014.json)
+and the [reproducible probe](integration/probes/startup_benchmark.py).
+
+Validation: all 62 tests pass and the 0.1.4 wheel builds. A native dev1 CondorIO
+job completed with verified NumPy/PyCBC output, a 0.15 s container-start phase,
+and no extraction fallback. A real-runtime test with an injected pre-payload
+setup failure used extraction and ran its deliberately failing payload exactly
+once, preserving exit 7. The dev3/dev4 probes were canceled while still queued
+behind busy workers, so they are not successful execution evidence. All three
+test caches drained to zero leases and remained within their budgets.
+
 ## Concurrent hook snapshot fix (0.1.3)
 
 The exclusive nonblocking packaging lock introduced in 0.1.2 caused concurrent

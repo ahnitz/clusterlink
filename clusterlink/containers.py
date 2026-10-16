@@ -1,4 +1,5 @@
 """Build a Conda environment into a SIF and ship a private Apptainer runtime."""
+import gzip
 import hashlib
 import json
 import os
@@ -68,8 +69,12 @@ def build(prefix, state, base=None, *, allow_build=True):
     artifacts = state/'artifacts'; artifacts.mkdir(exist_ok=True)
     manifest = artifacts/(key+'.manifest.json')
     if manifest.exists():
-        info = json.loads(manifest.read_text()); cached = artifacts/(info['sha256']+'.tar.gz')
+        info = json.loads(manifest.read_text()); cached = artifacts/(info['sha256']+info.get('suffix', '.tar.gz'))
         if cached.is_file() and checksum(cached) == info['sha256']:
+            if allow_build and cached.name.endswith('.tar.gz'):
+                cached = uncompress_bundle(cached)
+                from .cli import save
+                save(manifest, {**info, 'sha256': cached.stem, 'suffix': '.tar'})
             return cached
     if not allow_build:
         raise ValueError('Project SIF is missing, stale, or damaged; leave the project shell and run clusterlink activate before submitting jobs')
@@ -98,21 +103,39 @@ def build(prefix, state, base=None, *, allow_build=True):
         unpacked=sum(p.stat().st_size for p in rootfs.rglob('*') if p.is_file() and not p.is_symlink())
         metadata={'backend':'sif','base':base,'runtime_version':VERSION,'environment_prefix':PREFIX,'rootfs_bytes':unpacked,'source':str(prefix),'fingerprint':signature,'sif_sha256':checksum(image)}
         marker=work/'clusterlink-container.json';marker.write_text(json.dumps(metadata))
-        output=work/'container.tar.gz'
-        with tarfile.open(output,'w:gz') as tar:
+        output=work/'container.tar'
+        with tarfile.open(output,'w') as tar:
             tar.add(image,arcname='environment.sif')
             tar.add(marker,arcname='clusterlink-container.json')
             tar.add(private_runtime,arcname='apptainer-runtime')
-        digest=checksum(output);destination=artifacts/(digest+'.tar.gz');output.rename(destination)
+        digest=checksum(output);destination=artifacts/(digest+'.tar');output.rename(destination)
         with tarfile.open(destination) as tar:
             extraction=sum(m.size for m in tar if m.isfile())
         # --unsquash needs space for the full rootfs as well as the delivery bundle.
         from .cli import save
         save(destination.with_suffix('.disk.json'), {'bytes':destination.stat().st_size+extraction+unpacked})
-        save(manifest, {**metadata,'sha256':digest})
+        save(manifest, {**metadata,'sha256':digest,'suffix':'.tar'})
         return destination
 
 
 def checksum(path):
     with Path(path).open('rb') as stream:
         return hashlib.file_digest(stream,'sha256').hexdigest()
+
+
+def uncompress_bundle(artifact):
+    """Upgrade an existing image's delivery wrapper without rebuilding its SIF."""
+    from .environments import required_bundle_disk
+    from .cli import save
+    with tempfile.NamedTemporaryFile(dir=artifact.parent, suffix='.partial') as output:
+        with gzip.open(artifact, 'rb') as source:
+            shutil.copyfileobj(source, output, 1024 * 1024)
+        output.flush()
+        partial = Path(output.name)
+        destination = artifact.parent / (checksum(partial) + '.tar')
+        disk = required_bundle_disk(artifact) - artifact.stat().st_size + partial.stat().st_size
+        # The temporary file is deleted on close; publish a complete immutable copy.
+        if not destination.exists():
+            os.link(partial, destination)
+        save(destination.with_suffix('.disk.json'), {'bytes': disk})
+    return destination

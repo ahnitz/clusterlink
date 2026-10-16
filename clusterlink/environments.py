@@ -43,7 +43,7 @@ def publish_prepared(state, selection, artifact):
     with artifact.open('rb') as stream:
         digest = hashlib.file_digest(stream, 'sha256').hexdigest()
     disk = required_bundle_disk(artifact)
-    if before != artifact_identity(artifact) or artifact.name != digest + '.tar.gz':
+    if before != artifact_identity(artifact) or artifact.name not in {digest + '.tar', digest + '.tar.gz'}:
         raise ValueError('Prepared image changed or has an invalid digest')
     record = {'version': 1, 'selection': selection, 'artifact': str(artifact),
               'sha256': digest, 'environment_disk': disk, 'identity': before}
@@ -59,7 +59,7 @@ def prepared_image(state, selection):
         artifact = Path(record['artifact'])
         if (record['version'] != 1 or record['selection'] != selection
                 or artifact.parent != (state / 'artifacts').resolve()
-                or artifact.name != record['sha256'] + '.tar.gz'
+                or artifact.name not in {record['sha256'] + '.tar', record['sha256'] + '.tar.gz'}
                 or record['identity'] != artifact_identity(artifact)
                 or not isinstance(record['environment_disk'], int)
                 or record['environment_disk'] <= 0):
@@ -144,6 +144,7 @@ def launcher(command, archive='environment.tar.gz', source_prefix=None, staged_s
                     'p.write_bytes(data.replace(old,new)) if b"\\x00" not in data and old in data else None')
             remap += ('"$CLUSTERLINK_ENV/bin/python" -c ' + shlex.quote(code) + ' '
                       + shlex.quote(staged_script) + ' "$source_prefix" "$CLUSTERLINK_ENV/"\n')
+    timing = 'printf \'CLUSTERLINK_TIMING phase=%s epoch=%s\\n\' \"$1\" \"$(date +%s.%N)\" >&2'
     container = ('[ -f .clusterlink-env/environment.sif ] || { echo "Clusterlink SIF missing" >&2; exit 1; }\n'
         '  mkdir -p .clusterlink-env/tmp .clusterlink-env/cache .clusterlink-env/config\n'
         '  export APPTAINER_TMPDIR="$PWD/.clusterlink-env/tmp"\n'
@@ -166,15 +167,32 @@ def launcher(command, archive='environment.tar.gz', source_prefix=None, staged_s
         '  done\n'
         "  cat > .clusterlink-env/run.sh <<'CLUSTERLINK_INNER'\n"
         '#!/bin/bash\nset -euo pipefail\n'
+        'touch .clusterlink-env/payload-started\n'
+        'timing() { ' + timing + '; }\n'
+        'timing payload_start\n'
+        'trap \'result=$?; timing payload_end; exit \"$result\"\' EXIT\n'
         'export CLUSTERLINK_ENV=/opt/clusterlink/env\n'
         'export CONDA_PREFIX="$CLUSTERLINK_ENV"\n'
         'export PEGASUS_PYTHON="$CLUSTERLINK_ENV/bin/python"\n'
         'export PATH="$CLUSTERLINK_ENV/bin:$PATH"\n'
         'unset PYTHONHOME PYTHONPATH\nexport PYTHONNOUSERSITE=1\n'
         + remap + command + ' "$@"\nCLUSTERLINK_INNER\n'
-        '  ./.clusterlink-env/apptainer-runtime/bin/apptainer exec --unsquash --userns --cleanenv --containall '
-        '--bind "$PWD:/work" --pwd /work .clusterlink-env/environment.sif /bin/bash /work/.clusterlink-env/run.sh "$@"\n'
-        '  exit $?\n')
+        '  run_container() {\n'
+        '    ./.clusterlink-env/apptainer-runtime/bin/apptainer exec "$@" --userns --cleanenv --containall '
+        '--bind "$PWD:/work" --pwd /work .clusterlink-env/environment.sif /bin/bash /work/.clusterlink-env/run.sh "${payload_args[@]}"\n'
+        '  }\n'
+        '  payload_args=("$@")\n'
+        '  timing container_start\n'
+        '  result=0; run_container || result=$?\n'
+        '  if [ "$result" -ne 0 ] && [ ! -e .clusterlink-env/payload-started ]; then\n'
+        '    echo "Clusterlink: container setup failed before payload; retrying with SIF extraction" >&2\n'
+        '    timing extraction_fallback\n'
+        '    result=0; run_container --unsquash || result=$?\n'
+        '  fi\n'
+        '  timing container_end\n'
+        '  exit "$result"\n')
     return ('#!/bin/bash\nset -euo pipefail\n' + failure
-            + 'mkdir .clusterlink-env\ntar -xzf ' + shlex.quote(archive)
-            + ' -C .clusterlink-env\n' + container)
+            + 'timing() { ' + timing + '; }\n'
+            + 'timing bundle_start\n'
+            + 'mkdir .clusterlink-env\ntar -xf ' + shlex.quote(archive)
+            + ' -C .clusterlink-env\ntiming bundle_ready\n' + container)

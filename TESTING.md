@@ -83,13 +83,18 @@ Large total job counts and high submission rates are different requirements:
 same number of second-long jobs can be dominated by preparation and transfer.
 No 20–30k-job capacity or throughput claim has been validated.
 
-The existing preparation hook fingerprints the environment, reads the bundle to
-compute its digest, and checks/pins the remote cache for each job. The package
-lock serializes environment preparation; the per-site upload lock serializes
-cache checks/uploads. Persistent native helpers handle scheduler communication,
-but these hook costs remain even when the image is already cached. Input/output
-transfers and scheduler limits can also dominate. Avoid increasing route limits
-blindly: they bound pressure on the user's submission host and storage.
+Since 0.1.3, activation fingerprints the environment and verifies the bundle;
+hooks read a small immutable-image manifest and check file identity. Per-site
+upload locks still serialize cache checks/uploads, and every job checks/pins the
+remote cache through SSH. Persistent native helpers handle scheduler communication.
+Input/output transfers and scheduler limits can also dominate. Route limits bound
+pressure on the user's submission host and storage.
+
+Since 0.1.4, workers prefer direct SIF mounts, with extraction fallback only before
+the payload starts. Delivery bundles have no outer gzip layer. Capture
+`CLUSTERLINK_TIMING` stderr records and native Condor transfer events when comparing
+startup with payload time. Container startup includes the pre-payload wrapper;
+payload time includes wrapper remapping and Pegasus when present.
 
 Before recommending large campaigns:
 
@@ -100,8 +105,8 @@ Before recommending large campaigns:
 3. Measure login-node CPU/memory, local manager memory, staging high-water usage,
    and behavior across disconnects and failed submissions. Check for duplicate
    execution and leaked cache leases after draining the queue.
-4. Remove repeated immutable-image verification overhead where measurements
-   justify it, preserving environment-change detection and cache leases. Keep
+4. Measure remaining cache-check and staging overhead, preserving activation
+   snapshots and cache leases. Keep
    scheduling, throttling, and retries in HTCondor/Pegasus.
 5. Benchmark Pegasus task clustering separately if scientific tasks are short
    and combining them into fewer scheduler jobs is acceptable.
@@ -110,7 +115,7 @@ HTCondor documents route backpressure in its
 [Job Router manual](https://htcondor.readthedocs.io/en/main/grid-computing/job-router.html).
 This plan does not authorize an unbounded load test on shared login nodes.
 
-A read-only warm-cache sample on the development workstation measured about
+Before the 0.1.3 snapshot fix, a read-only warm-cache sample on the development workstation measured about
 0.2 seconds for environment fingerprinting and 0.4 seconds for hashing a
 751,755,770-byte bundle per job (three samples; see
 [instrumentation evidence](integration/probes/local-preparation-timing.json)).

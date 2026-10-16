@@ -71,6 +71,8 @@ def prepare(ad, site, state):
     # Packaging introduces disk usage the original submit file cannot know.
     # Preserve the user's working-space request and add inputs plus environment.
     ad['RequestDisk'] = int(ad.get('RequestDisk', 0)) + (environment_disk + input_disk + 1023)//1024 + 65536
+    # Cache filenames retain the legacy suffix for remote protocol compatibility;
+    # tar auto-detects compressed old bundles and uncompressed new bundles.
     archive = digest + '.tar.gz'
     if site['scheduler'] == 'condor' and ad.get('ClusterlinkNoCache') is not True:
         cache_key = hashlib.sha256(json.dumps(site, sort_keys=True).encode()).hexdigest()

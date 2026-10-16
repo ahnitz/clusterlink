@@ -107,3 +107,46 @@ class PreparedImageTests(unittest.TestCase):
                     runtime(state)
             self.assertIn('Extracting', (state / 'install-apptainer.log').read_text())
             self.assertFalse((state / 'container-runtime').exists())
+
+
+class StartupOptimizationTests(unittest.TestCase):
+    def test_mount_fallback_does_not_repeat_payload(self):
+        for mode, payload_exit, expected_calls in [('mount', 0, 1), ('mount', 7, 1), ('fallback', 0, 2), ('fallback', 7, 2), ('fail', 0, 2)]:
+            with self.subTest(mode=mode, payload_exit=payload_exit), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                fake = ('#!/bin/bash\nset -eu\necho attempt >> attempts\n'
+                        + ('exit 42\n' if mode == 'fail' else '')
+                        + ('[[ " $* " == *" --unsquash "* ]] || exit 42\n' if mode == 'fallback' else '')
+                        + 'while [ "$1" != /bin/bash ]; do shift; done\nshift\nscript=${1#/work/}; shift\nexec /bin/bash "$script" "$@"\n').encode()
+                archive = root / 'bundle.tar'
+                with tarfile.open(archive, 'w') as tar:
+                    for name, data, permissions in [('environment.sif', b'image', 0o600), ('apptainer-runtime/bin/apptainer', fake, 0o700), ('apptainer-runtime/x86_64/etc/apptainer/apptainer.conf', b'mount devpts = yes\n', 0o600)]:
+                        member = tarfile.TarInfo(name); member.size = len(data); member.mode = permissions
+                        tar.addfile(member, io.BytesIO(data))
+                command = f'echo payload >> executions; exit {payload_exit}'
+                result = subprocess.run(['bash'], input=launcher(command, archive=str(archive)), cwd=root, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 42 if mode == 'fail' else payload_exit, result.stderr)
+                self.assertEqual(len((root/'attempts').read_text().splitlines()), expected_calls)
+                self.assertEqual((root/'executions').exists(), mode != 'fail')
+                if mode != 'fail':
+                    self.assertEqual((root/'executions').read_text(), 'payload\n')
+                    self.assertIn('phase=payload_start', result.stderr)
+                    self.assertIn('phase=payload_end', result.stderr)
+                self.assertIn('phase=bundle_ready', result.stderr)
+                self.assertEqual('phase=extraction_fallback' in result.stderr, mode != 'mount')
+
+    def test_upgrade_removes_only_outer_compression(self):
+        from clusterlink.containers import uncompress_bundle
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); archive = root/'old.tar.gz'
+            with tarfile.open(archive, 'w:gz') as tar:
+                for name, data in [('environment.sif', b'immutable SIF content'), ('clusterlink-container.json', b'{"backend":"sif","rootfs_bytes":100000}')]:
+                    member=tarfile.TarInfo(name); member.size=len(data); tar.addfile(member,io.BytesIO(data))
+            old_disk=required_bundle_disk(archive)
+            plain=uncompress_bundle(archive)
+            self.assertEqual(plain.suffix, '.tar')
+            self.assertNotEqual(plain.read_bytes()[:2], b'\x1f\x8b')
+            with tarfile.open(plain) as tar:
+                self.assertEqual(tar.extractfile('environment.sif').read(), b'immutable SIF content')
+            self.assertEqual(required_bundle_disk(plain), old_disk-archive.stat().st_size+plain.stat().st_size)
+            self.assertTrue(archive.exists())

@@ -38,6 +38,35 @@ python integration/pycbc/prepare.py --source local/pycbc-source \
 The complete workflow has been planned and submitted. It has not yet passed.
 See [STATUS.md](../../STATUS.md) for verified stages, alternate-host recovery, and remaining validation.
 
+For a fresh run after installing the isolated dependencies and applying the
+adaptations, the generation/submission sequence is below. Do not run this over
+an active or existing output directory; use its generated `start` script to resume
+from a rescue checkpoint instead.
+
+```bash
+project=$PWD
+export PATH="$project/local/pycbc-env/bin:$project/local/pegasus/bin:$project/local/workflow-tools/bin:/usr/bin:/bin"
+export JAVA_HOME="$project/local/workflow-tools"
+export PEGASUS_JAVA_HOME="$JAVA_HOME"
+export PEGASUS_PYTHON="$project/local/pycbc-env/bin/python"
+export PYTHONNOUSERSITE=1 PEGASUS_METRICS=false
+export MPLCONFIGDIR="$project/local/pycbc-test/mpl"
+export XDG_CACHE_HOME="$project/local/pycbc-test/cache"
+export TMPDIR="$project/local/tmp"
+eval "$("$project/local/runtime/bin/clusterlink" activate --env "$project/local/pycbc-env")"
+cd "$project/local/pycbc-test"
+bash "$project/local/pycbc-source/examples/search/bank.sh"
+bash "$project/local/pycbc-source/examples/search/stats.sh"
+pycbc_make_offline_search_workflow --workflow-name gw --output-dir output-cache \
+  --config-files analysis.ini plotting.ini executables.ini injections_minimal.ini \
+  --config-overrides "results_page:output-path:$PWD/html-cache" --plan-now
+cd output-cache
+./start
+```
+
+This uses the upstream bank/statistic generators unchanged, and replaces the
+example's frame download/copy step with the supplied frame-cache interface.
+
 Portability fix during acceptance: pip initially selected a glibc 2.34 build of
 cryptography and locally compiled SQLAlchemy C extensions needing glibc 2.38.
 The older su workers cannot use those binaries. Keep the same cryptography

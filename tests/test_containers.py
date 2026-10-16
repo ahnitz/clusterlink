@@ -37,7 +37,8 @@ script=${1#/work/}; shift
 exec /bin/bash "$script" "$@"
 '''
             with tarfile.open(artifact,'w:gz') as tar:
-                for name,data,mode in [('environment.sif',b'fake',0o600),('apptainer-runtime/bin/apptainer',fake,0o700)]:
+                for name,data,mode in [('environment.sif',b'fake',0o600),('apptainer-runtime/bin/apptainer',fake,0o700),
+                    ('apptainer-runtime/x86_64/etc/apptainer/apptainer.conf',b'mount devpts = yes\nmount proc = yes\n',0o600)]:
                     info=tarfile.TarInfo(name);info.size=len(data);info.mode=mode;tar.addfile(info,io.BytesIO(data))
             probe=root/'probe.sh';probe.write_text('#!/bin/bash\nprintf "%s\\n" "$CONDA_PREFIX" "$PEGASUS_PYTHON" "$1" "$2" > observed\nexit 7\n');probe.chmod(0o700)
             launch=root/'launch.sh';launch.write_text(launcher('./probe.sh','bundle.tar.gz',outputs=['missing.dat']))
@@ -45,3 +46,5 @@ exec /bin/bash "$script" "$@"
             self.assertEqual(result.returncode,7,result.stderr)
             self.assertEqual((root/'observed').read_text().splitlines(),['/opt/clusterlink/env','/opt/clusterlink/env/bin/python','with spaces','literal $value'])
             self.assertTrue((root/'missing.dat').exists())
+            self.assertEqual((root/'.clusterlink-env/apptainer-runtime/x86_64/etc/apptainer/apptainer.conf').read_text(),
+                             'mount devpts = no\nmount proc = yes\n')

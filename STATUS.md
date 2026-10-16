@@ -2,15 +2,20 @@
 
 ## Current acceptance work
 
-A fresh project-local SIF PyCBC acceptance run was submitted once as root job 1
-on 2026-10-15 at 23:56 local time and is running under
-`local/pycbc-clean-run`. It has an independently cloned Conda environment,
-new project identity, fresh remote enrollment/cache roots, and no previous
-workflow outputs or pinned environment archive. Its 247-node main DAG has
-returned initial jobs from both sites. Completion is not yet claimed.
+The first fresh SIF attempt in `local/pycbc-clean-run` was submitted once as
+root job 1. It reached 29 completed main nodes before the injection-SNR merge
+failed during Apptainer extraction on OSG worker `nal-005-docker`: a nested
+container could not mount a separate devpts instance. User namespaces were
+advertised, but that alone did not establish support for this extra mount.
+The failed run was canceled and its logs retained; it is not an acceptance pass.
 
-The test launcher needed a Bash invocation fix before submission; the unused
-preflight plan is retained separately. No jobs were submitted from that plan.
+The launcher now disables devpts in its extracted private runtime configuration,
+covering both the internal extractor and payload. This changes no host settings.
+Regression probes are running before a second fresh project,
+`local/pycbc-clean-run2`, is submitted. No successful unattended run is claimed yet.
+
+The test launcher also needed a Bash invocation fix before the first submission;
+the unused preflight plan is retained separately and submitted no jobs.
 
 The acceptance criterion is one submission reaching root-DAG success, all
 follow-up workflows completing, and scientific-output validation passing,

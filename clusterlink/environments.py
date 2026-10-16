@@ -147,6 +147,13 @@ def launcher(command, archive='environment.tar.gz', source_prefix=None, staged_s
         '  export APPTAINER_TMPDIR="$PWD/.clusterlink-env/tmp"\n'
         '  export APPTAINER_CACHEDIR="$PWD/.clusterlink-env/cache"\n'
         '  export APPTAINER_CONFIGDIR="$PWD/.clusterlink-env/config"\n'
+        # This is our freshly extracted, user-owned runtime, never the host's
+        # configuration. The nested unsquashfs helper does not inherit CLI
+        # --no-mount flags, so configure devpts here for both helper and payload.
+        '  for config in .clusterlink-env/apptainer-runtime/*/etc/apptainer/apptainer.conf; do\n'
+        '    [ -f "$config" ] || { echo "Private Apptainer configuration missing" >&2; exit 1; }\n'
+        '    sed -i -E "s/^[[:space:]]*mount devpts[[:space:]]*=.*/mount devpts = no/" "$config"\n'
+        '  done\n'
         "  cat > .clusterlink-env/run.sh <<'CLUSTERLINK_INNER'\n"
         '#!/bin/bash\nset -euo pipefail\n'
         'export CLUSTERLINK_ENV=/opt/clusterlink/env\n'

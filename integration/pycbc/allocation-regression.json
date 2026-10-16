@@ -1,0 +1,44 @@
+{
+  "requested_cpus": 2,
+  "explicit_mkl_override": 1,
+  "results": {
+    "su": {
+      "site": "su",
+      "glibc": [
+        "glibc",
+        "2.42"
+      ],
+      "prefix": "/opt/clusterlink/env",
+      "hostname": "CRUSH-OG-10-5-210-138",
+      "thread_limits": {
+        "OMP_NUM_THREADS": "2",
+        "MKL_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "2",
+        "OMP_THREAD_LIMIT": "2"
+      },
+      "pycbc": "0.0a1",
+      "strlcpy": "container-glibc",
+      "fft_max_error": 1.3322676295501878e-15,
+      "matched_filter_peak": 2.7789592622012216
+    },
+    "osg": {
+      "site": "osg",
+      "glibc": [
+        "glibc",
+        "2.42"
+      ],
+      "prefix": "/opt/clusterlink/env",
+      "hostname": "warlock34",
+      "thread_limits": {
+        "OMP_NUM_THREADS": "2",
+        "MKL_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "2",
+        "OMP_THREAD_LIMIT": "2"
+      },
+      "pycbc": "0.0a1",
+      "strlcpy": "container-glibc",
+      "fft_max_error": 1.5543122344752192e-15,
+      "matched_filter_peak": 2.778959262201222
+    }
+  }
+}

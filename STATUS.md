@@ -18,7 +18,9 @@ with two native DAGMan retries configured before submission. That development ru
 passed, because a wrapper review found that `--cleanenv` discarded native
 scheduler CPU-thread limits. The launcher now preserves those limits and GPU
 visibility masks through Apptainer, retaining explicit Apptainer overrides.
-Allocation/override probes are pending before `local/pycbc-final-run` is submitted.
+Allocation/override probes passed on both su and osg: two requested CPUs
+produced OpenMP/OpenBLAS limits of two inside the SIF, while an explicit MKL
+override remained one. `local/pycbc-final-run` is being prepared for submission.
 No successful unattended full run is claimed yet.
 
 The test launcher also needed a Bash invocation fix before the first submission;

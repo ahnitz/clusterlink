@@ -42,10 +42,11 @@ requirement or a capability check; this is not automatic capability discovery.
 After the root DAG finishes, run in the same activated project:
 
 ```bash
-python /path/to/clusterlink/integration/pycbc/validate.py output --report validation.json
+python /path/to/clusterlink/integration/pycbc/validate.py output --require-unattended --report validation.json
 ```
 
-The validator requires root-DAG success and checks positive finite template
+The validator requires root-DAG and child-DAG success with no rescue restarts,
+reports failed attempts handled by native retries, and checks positive finite template
 masses, nonempty finite trigger SNRs for H1/L1/V1 in both search branches, and
 finite injection optimal SNRs. It checks scientific integrity, not equivalence
 to a reference scientific analysis.

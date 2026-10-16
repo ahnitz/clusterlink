@@ -1,0 +1,46 @@
+{
+  "pegasus": {
+    "count": 5,
+    "sum": 15.0,
+    "sum_squares": 55.0,
+    "mean": 3.0,
+    "python": "3.11.17 (main, Oct 13 2026, 16:45:47) [GCC 15.3.0]",
+    "executable": "/opt/clusterlink/env/bin/python3",
+    "prefix": "/opt/clusterlink/env",
+    "numpy": "2.4.6",
+    "numpy_file": "/opt/clusterlink/env/lib/python3.11/site-packages/numpy/__init__.py",
+    "hostname": "CRUSH-OG-10-5-234-179",
+    "second_hostname": "chpc-compute020",
+    "second_executable": "/opt/clusterlink/env/bin/python3"
+  },
+  "probes": {
+    "su": {
+      "site": "su",
+      "glibc": [
+        "glibc",
+        "2.42"
+      ],
+      "prefix": "/opt/clusterlink/env",
+      "pycbc": "0.0a1",
+      "strlcpy": "container-glibc",
+      "fft_max_error": 1.3322676295501878e-15,
+      "matched_filter_peak": 2.7789592622012216
+    },
+    "osg": {
+      "site": "osg",
+      "glibc": [
+        "glibc",
+        "2.42"
+      ],
+      "prefix": "/opt/clusterlink/env",
+      "pycbc": "0.0a1",
+      "strlcpy": "container-glibc",
+      "fft_max_error": 1.5543122344752192e-15,
+      "matched_filter_peak": 2.778959262201222
+    }
+  },
+  "installed_entrypoint": "PyCBC version: 0.0a1",
+  "standalone_inspiral": "failed before execution: worker user namespaces unavailable",
+  "pegasus_completed_nodes": 13,
+  "pegasus_manual_rescue_count": 1
+}

@@ -2,10 +2,15 @@
 
 ## Current acceptance work
 
-A fresh project-local SIF PyCBC acceptance run is being prepared under
+A fresh project-local SIF PyCBC acceptance run was submitted once as root job 1
+on 2026-10-15 at 23:56 local time and is running under
 `local/pycbc-clean-run`. It has an independently cloned Conda environment,
 new project identity, fresh remote enrollment/cache roots, and no previous
-workflow outputs or pinned environment archive. Completion is not yet claimed.
+workflow outputs or pinned environment archive. Its 247-node main DAG has
+returned initial jobs from both sites. Completion is not yet claimed.
+
+The test launcher needed a Bash invocation fix before submission; the unused
+preflight plan is retained separately. No jobs were submitted from that plan.
 
 The acceptance criterion is one submission reaching root-DAG success, all
 follow-up workflows completing, and scientific-output validation passing,

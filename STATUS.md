@@ -20,7 +20,10 @@ scheduler CPU-thread limits. The launcher now preserves those limits and GPU
 visibility masks through Apptainer, retaining explicit Apptainer overrides.
 Allocation/override probes passed on both su and osg: two requested CPUs
 produced OpenMP/OpenBLAS limits of two inside the SIF, while an explicit MKL
-override remained one. `local/pycbc-final-run` is being prepared for submission.
+override remained one. `local/pycbc-final-run` was submitted once as root job 1 at 00:52 local time
+on 2026-10-16. Its native policy allows two DAGMan retries and caps each remote
+job at one hour including startup. The predeclared worker requirement excludes
+the one stalled Syracuse worker. No job intervention has been performed on this run.
 No successful unattended full run is claimed yet.
 
 The test launcher also needed a Bash invocation fix before the first submission;

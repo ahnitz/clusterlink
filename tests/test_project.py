@@ -33,7 +33,7 @@ class ProjectTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);env=root/'env';(env/'conda-meta').mkdir(parents=True)
             conda=root/'conda';conda.touch()
-            with patch('pathlib.Path.cwd',return_value=root):state=project.initialize(env)
+            with patch('pathlib.Path.cwd',return_value=root):state=project.initialize(env, backend='conda')
             with patch.dict(os.environ,{'CONDA_EXE':str(conda)}),patch('clusterlink.project.subprocess.check_output',return_value='# conda hook'),patch('clusterlink.project.subprocess.call',return_value=0) as shell,patch('clusterlink.pool.configure'),patch('clusterlink.pool.running',return_value=False),patch('clusterlink.pool.start') as start:
                 self.assertEqual(project.activate(state),0)
             start.assert_called_once_with(state)

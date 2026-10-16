@@ -29,7 +29,7 @@ def discover(explicit=None):
     raise ValueError('No Clusterlink project found; run clusterlink init --env PREFIX')
 
 
-def initialize(prefix):
+def initialize(prefix, backend='sif', base=None):
     from .cli import save
     prefix = Path(prefix).expanduser().resolve()
     if not (prefix / 'conda-meta').is_dir():
@@ -43,7 +43,7 @@ def initialize(prefix):
         raise ValueError('Project state already exists; refusing to replace it')
     state.mkdir(mode=0o700)
     save(state / 'project.json', {'id': uuid.uuid4().hex, 'root': str(state.parent)})
-    save(state / 'environment.json', {'prefix': str(prefix)})
+    save(state / 'environment.json', {'prefix': str(prefix), 'backend': backend, **({'container_base': base} if base else {})})
     save(state / 'sites.json', {})
     (state / '.gitignore').write_text('*\n')
     return state
@@ -66,6 +66,13 @@ def activate(state):
     conda = os.environ.get('CONDA_EXE') or shutil.which('conda')
     if not conda or not Path(conda).is_file():
         raise ValueError('Conda is not available; launch Clusterlink from a shell with Conda installed')
+    if selection.get('backend') == 'sif':
+        from .environments import bundle
+        import fcntl
+        print('Preparing project SIF (reused when the environment is unchanged)...', flush=True)
+        with (state / '.pack.lock').open('a') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            bundle(prefix, state, backend='sif', base=selection.get('container_base'))
     # Validate shell integration before starting the project manager.
     hook = subprocess.check_output([conda, 'shell.bash', 'hook'], text=True)
     script = hook + '\nconda activate ' + shlex.quote(str(prefix)) + ' || exit 1\n'

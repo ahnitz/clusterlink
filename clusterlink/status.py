@@ -34,6 +34,7 @@ def collect(state, remote=False):
         'project': read(state / 'project.json'),
         'environment': {
             'prefix': prefix,
+            'backend': selection.get('backend', 'conda') if prefix else None,
             'conda_metadata_present': bool(prefix and (Path(prefix) / 'conda-meta').is_dir()),
             'packaging': 'pinned archive' if artifact else 'automatic' if prefix else 'not selected',
             'artifact': artifact,
@@ -65,7 +66,8 @@ def render(data):
     env, pool_state = data['environment'], data['pool']
     lines = ([f"Project: {data['project']['root']}"] if data.get('project') else []) + [f"State: {data['state_directory']}",
              f"Conda environment: {env['prefix'] or 'not selected (run clusterlink activate --env PREFIX)'}",
-             f"Packaging: {env['packaging']}"]
+             f"Packaging: {env['packaging']}",
+             f"Backend: {env.get('backend') or 'not selected'}"]
     if env['prefix'] and not env['conda_metadata_present']:
         lines.append('  Selected environment is missing its conda-meta directory.')
     if env['artifact']:

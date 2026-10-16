@@ -119,7 +119,11 @@ CLUSTERLINK_HOOK_JOB_CLEANUP = {cleanup}
     if selected.exists():
         selection = json.loads(selected.read_text())
         prefix = selection['prefix']
-        text += '\nSUBMIT_ATTRS = ClusterlinkEnvironment, ClusterlinkEligible\n'
+        text += '\nSUBMIT_ATTRS = ClusterlinkBackend, ClusterlinkContainerBase\n'
+        text += 'ClusterlinkBackend = ' + json.dumps(selection.get('backend', 'conda')) + '\n'
+        if selection.get('container_base'):
+            text += 'ClusterlinkContainerBase = ' + json.dumps(selection['container_base']) + '\n'
+        text += '\nSUBMIT_ATTRS = $(SUBMIT_ATTRS), ClusterlinkEnvironment, ClusterlinkEligible\n'
         text += 'ClusterlinkEnvironment = ' + json.dumps(prefix) + '\n'
         text += 'ClusterlinkEligible = True\nJOB_ROUTER_HOOK_KEYWORD = CLUSTERLINK\n'
         if selection.get('artifact'):

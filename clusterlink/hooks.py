@@ -53,7 +53,7 @@ def prepare(ad, site, state):
                 raise ValueError('ClusterlinkArtifact must name an existing conda-pack archive')
             artifact = Path(selected).resolve()
         else:
-            artifact = bundle(prefix, state)
+            artifact = bundle(prefix, state, backend=ad.get('ClusterlinkBackend', 'conda'), base=ad.get('ClusterlinkContainerBase'))
         environment_disk = required_bundle_disk(artifact)
     with artifact.open('rb') as stream:
         digest = hashlib.file_digest(stream, 'sha256').hexdigest()

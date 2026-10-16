@@ -2,7 +2,8 @@
 
 Run Conda-based scientific jobs on your SSH-accessible clusters from one project
 folder. Keep using ordinary HTCondor submissions or Pegasus workflows. Clusterlink
-handles environment packaging, remote cache preparation, and private configuration.
+automatically builds a SIF container from your environment, prepares remote caches,
+and manages private configuration.
 No administrator changes or manual environment variables are required.
 
 **Development prototype.** The PyCBC acceptance workflow completed across three
@@ -12,7 +13,9 @@ remote HTCondor submission hosts, with documented manual retries. See
 ## Setup once per project
 
 You need Linux, Bash, Conda, OpenSSH, and HTCondor with Job Router/GridManager on
-your workstation. Start with your project's Conda environment activated, then:
+your workstation. Local SIF building also needs `curl`, `rpm2cpio`, and `cpio`.
+Remote workers must permit unprivileged user namespaces; Apptainer itself is
+provided by Clusterlink, without administrator installation. Start with your project's Conda environment activated, then:
 
 ```bash
 python -m pip install git+https://github.com/ahnitz/clusterlink.git
@@ -43,10 +46,13 @@ condor_q
 ```
 
 `activate` opens a Bash project shell, activates the exact recorded Conda
-environment, selects its Condor configuration, and starts its project job manager
+environment, builds or reuses its SIF, selects its Condor configuration, and starts its project job manager
 if needed. It does not modify your shell startup files. Use ordinary Condor
 executable, resource-request, and input/output-transfer settings in `job.sub`.
-Clusterlink wraps the executable and caches the environment automatically.
+Clusterlink wraps the executable and caches the image and private Apptainer runtime
+automatically. The image includes userspace libraries such as glibc. Initial
+activation downloads a base matching the workstation distribution and builds the
+image; later activations reuse it until the environment changes.
 
 For Pegasus, select a vanilla Condor site with CondorIO. The PyCBC site adaptation
 and completed example are documented in [the PyCBC guide](integration/pycbc/README.md).
@@ -83,8 +89,9 @@ Logs live in `.clusterlink/log`. Use `clusterlink --help` for other controls.
   cached delivery is currently Condor-only.
 - Routing uses native Job Router round robin and queue limits. Automatic
   cross-site failover and capability discovery are not implemented.
-- Conda bundles still require compatible worker operating systems and libraries.
-  Automatic container creation is not implemented.
+- SIF isolates userspace libraries, not the kernel, CPU architecture, or GPU
+  drivers. Workers must allow user namespaces. Source Conda environments must be
+  intact; containers do not repair damaged package installations.
 - Only environment bundles are cached. Other inputs use ordinary CondorIO.
   Cache budgets are enforced; total scheduler staging is not a hard disk quota.
 - Outputs must have distinct basenames; directory transfers are unsupported.

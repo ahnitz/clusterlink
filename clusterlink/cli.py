@@ -100,21 +100,18 @@ def enroll(args, state):
 
 
 def pack(args, state):
-    import conda_pack
-    prefix = Path(args.env or os.environ.get("CONDA_PREFIX", "")).resolve()
-    if not (prefix / "conda-meta").is_dir():
-        raise ValueError("Activate a Conda environment or pass --env PREFIX")
-    artifacts = state / "artifacts"
-    artifacts.mkdir(exist_ok=True)
-    temp = artifacts / "packing.tar.gz"
-    if temp.exists():
-        raise ValueError("Packing already in progress or interrupted; inspect packing.tar.gz")
-    conda_pack.pack(prefix=str(prefix), output=str(temp))
-    digest = hashlib.file_digest(temp.open("rb"), "sha256").hexdigest()
-    target = artifacts / (digest + ".tar.gz")
-    temp.replace(target)
-    save(artifacts / (digest + ".json"), {"source": str(prefix), "sha256": digest, "bytes": target.stat().st_size})
-    print(digest)
+    from .environments import bundle
+    import fcntl
+    selection = json.loads((state / 'environment.json').read_text()) if (state / 'environment.json').exists() else {}
+    prefix = args.env or selection.get('prefix') or os.environ.get('CONDA_PREFIX')
+    if not prefix:
+        raise ValueError('Initialize a project with a Conda environment first')
+    if (state / 'project.json').exists() and Path(prefix).resolve() != Path(selection['prefix']):
+        raise ValueError('Packing environment must match the project environment')
+    with (state / '.pack.lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        artifact = bundle(prefix, state, backend=selection.get('backend', 'conda'), base=selection.get('container_base'))
+    print(artifact)
 
 
 def cache(args, state):
@@ -154,6 +151,8 @@ def main():
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser('init', help='Initialize this project with an explicit Conda environment')
     p.add_argument('--env', required=True)
+    p.add_argument('--backend', choices=['sif', 'conda'], default='sif')
+    p.add_argument('--container-base', help='Apptainer base URI (default: workstation distribution/version)')
     sub.add_parser('deactivate', help='Leave an activated project shell')
     p = sub.add_parser('activate', help='Select a Conda environment for ordinary Condor submissions')
     p.add_argument('--env', help='Legacy state only; projects use their recorded environment')
@@ -207,7 +206,7 @@ def main():
         if args.command == 'init':
             if args.state:
                 raise ValueError('init creates .clusterlink in the current project; do not pass --state')
-            print('Initialized ' + str(project.initialize(args.env)))
+            print('Initialized ' + str(project.initialize(args.env, args.backend, args.container_base)))
             return
         if args.command == 'deactivate':
             raise ValueError('Use clusterlink deactivate inside the shell opened by clusterlink activate')

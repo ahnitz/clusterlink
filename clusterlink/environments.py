@@ -25,7 +25,12 @@ def fingerprint(prefix):
     return h.hexdigest()
 
 
-def bundle(prefix, state):
+def bundle(prefix, state, backend='conda', base=None):
+    if backend == 'sif':
+        from .containers import build
+        return build(prefix, state, base)
+    if backend != 'conda':
+        raise ValueError('Unknown environment backend: ' + str(backend))
     import conda_pack
     prefix = Path(prefix).resolve()
     if not (prefix / 'conda-meta').is_dir():
@@ -72,6 +77,12 @@ def required_bundle_disk(artifact):
         return json.loads(record.read_text())['bytes']
     with tarfile.open(artifact) as archive:
         unpacked = sum(member.size for member in archive if member.isfile())
+        if 'clusterlink-container.json' in archive.getnames():
+            metadata = json.load(archive.extractfile('clusterlink-container.json'))
+            rootfs = metadata['rootfs_bytes']
+            if not isinstance(rootfs, int) or rootfs <= 0:
+                raise ValueError('Invalid container root filesystem size')
+            unpacked += rootfs
     total = artifact.stat().st_size + unpacked
     temp = record.with_suffix('.' + uuid.uuid4().hex + '.tmp')
     temp.write_text(json.dumps({'bytes': total}))
@@ -131,6 +142,21 @@ def launcher(command, archive='environment.tar.gz', source_prefix=None, staged_s
                     'p.write_bytes(data.replace(old,new)) if b"\\x00" not in data and old in data else None')
             remap += ('"$CLUSTERLINK_ENV/bin/python" -c ' + shlex.quote(code) + ' '
                       + shlex.quote(staged_script) + ' "$source_prefix" "$CLUSTERLINK_ENV/"\n')
+    container = ('if [ -f .clusterlink-env/environment.sif ]; then\n'
+        '  mkdir -p .clusterlink-env/tmp .clusterlink-env/cache .clusterlink-env/config\n'
+        '  export APPTAINER_TMPDIR="$PWD/.clusterlink-env/tmp"\n'
+        '  export APPTAINER_CACHEDIR="$PWD/.clusterlink-env/cache"\n'
+        '  export APPTAINER_CONFIGDIR="$PWD/.clusterlink-env/config"\n'
+        "  cat > .clusterlink-env/run.sh <<'CLUSTERLINK_INNER'\n"
+        '#!/bin/bash\nset -euo pipefail\n'
+        'export CLUSTERLINK_ENV=/opt/clusterlink/env\n'
+        'export CONDA_PREFIX="$CLUSTERLINK_ENV"\n'
+        'export PATH="$CLUSTERLINK_ENV/bin:$PATH"\n'
+        'unset PYTHONHOME PYTHONPATH\nexport PYTHONNOUSERSITE=1\n'
+        + remap + command + ' "$@"\nCLUSTERLINK_INNER\n'
+        '  ./.clusterlink-env/apptainer-runtime/bin/apptainer exec --unsquash --userns --cleanenv --containall '
+        '--bind "$PWD:/work" --pwd /work .clusterlink-env/environment.sif /bin/bash /work/.clusterlink-env/run.sh "$@"\n'
+        '  exit $?\nfi\n')
     return '''#!/bin/bash
 set -euo pipefail
 mkdir .clusterlink-env
@@ -141,4 +167,4 @@ export PYTHONNOUSERSITE=1
 "$CLUSTERLINK_ENV/bin/python" "$CLUSTERLINK_ENV/bin/conda-unpack"
 export PATH="$CLUSTERLINK_ENV/bin:$PATH"
 export CONDA_PREFIX="$CLUSTERLINK_ENV"
-'''.replace('ARCHIVE_PLACEHOLDER', shlex.quote(archive)).replace('set -euo pipefail\n', 'set -euo pipefail\n' + failure) + remap + command + ' "$@"\n'
+'''.replace('ARCHIVE_PLACEHOLDER', shlex.quote(archive)).replace('export CLUSTERLINK_ENV=', container + 'export CLUSTERLINK_ENV=', 1).replace('set -euo pipefail\n', 'set -euo pipefail\n' + failure, 1) + remap + command + ' "$@"\n'

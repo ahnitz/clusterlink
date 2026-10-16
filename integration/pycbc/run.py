@@ -38,7 +38,7 @@ def main():
                       'plotting.ini', 'executables.ini', 'injections_minimal.ini',
                       '--config-overrides', 'results_page:output-path:'+str(work/'html'),
                       '--plan-now'], work),
-        ('submit', ['./start'], work/'output'),
+        ('submit', ['bash', './start'], work/'output'),
     ]
     (work/'run-commands.json').write_text(json.dumps(
         [{'stage': name, 'command': command, 'cwd': str(cwd)} for name, command, cwd in steps], indent=2)+'\n')

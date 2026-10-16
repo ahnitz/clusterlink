@@ -1,103 +1,78 @@
-# Isolated PyCBC acceptance test
+# PyCBC mini-search acceptance
 
-The upstream `examples/search` workflow is used, including its template-bank
-and ranking-statistic generators. The environment was installed from an isolated
-checkout into `local/pycbc-env`, with a copy-only Conda package cache and pip cache
-under the project. Java/Pegasus are also project-local. No existing workstation
-PyCBC environment is used.
+This uses `ahnitz/pycbc` branch `firinspiral3-multidet-asym`, commit
+`6c67f3fd2ee6e347f44be081ba150f420219ebfa`. The upstream bank, ranking-statistic,
+search, follow-up, and report generators are retained. Scientific software runs
+from our dedicated Conda installation; Clusterlink builds its SIF automatically.
 
-`clusterlink-site.patch` adds one vanilla Condor/CondorIO site. The executable
-configuration patch selects that site, removes a site-specific accounting group,
-and requests 1 GiB of working disk explicitly (`1024M`). Clusterlink adds input
-and packed/unpacked environment storage automatically. `properties.txt` records the
-local Pegasus property overrides. Follow-up workflow generators and final HTML
-assembly run in the isolated local environment using Condor local-universe jobs:
-they create local absolute paths and child-workflow executable references. The
-scientific jobs in those child workflows still select Clusterlink. No search
-algorithm changes are intended.
+## Fresh project procedure
 
-The user-selected source is `ahnitz/pycbc`, branch
-`firinspiral3-multidet-asym`, commit `6c67f3fd2ee6e347f44be081ba150f420219ebfa`.
-Its native HDF5 frame reader successfully reads all three supplied caches.
-`analysis.patch` removes the example's hardcoded GWF filenames and sets
-`FROM_PREGENERATED_LCF_FILES` with `/home/ahnitz/gwdata/{H1,L1,V1}.cache`.
-PyCBC selects the required frame files and Pegasus stages them through CondorIO.
-Shared data is read only; nothing is converted or modified there.
-The follow-up generators do not call the main workflow's datafind machinery.
-Their `frame-files` inputs are therefore derived from the same selected cache
-records in `prepare.py`; Pegasus stages these as ordinary declared inputs.
+Install PyCBC and its dependencies in a dedicated Conda environment first. Keep
+an isolated checkout of that source and installations of Pegasus and Java for the
+test. The example below assumes those installations already exist. Run
+preparation **before activation**, because it adapts the installed PyCBC site
+catalog and properties that go into the image.
 
-Reapply the site and configuration adaptations with:
+From a fresh project folder:
 
 ```bash
-python integration/pycbc/prepare.py --source local/pycbc-source \
-  --env local/pycbc-env --work local/pycbc-test \
-  --cache-root /home/ahnitz/gwdata
+python /path/to/clusterlink/integration/pycbc/prepare.py \
+  --source /path/to/pycbc-source --env /path/to/project-conda-env \
+  --work . --cache-root /home/ahnitz/gwdata --evidence-dir evidence \
+  --requirements 'TARGET.HasUserNamespaces =?= True'
+clusterlink init --env /path/to/project-conda-env
+clusterlink enroll su --ssh su --cache-gb 3 --storage-gb 12 --max-jobs 20 --max-idle 10
+clusterlink enroll osg --ssh osg --cache-gb 3 --storage-gb 8 --max-jobs 8 --max-idle 4
+clusterlink activate
+python /path/to/clusterlink/integration/pycbc/run.py \
+  --source /path/to/pycbc-source --pegasus /path/to/pegasus --java /path/to/java
+condor_q
 ```
 
-The complete workflow passed: main 252/252, all 12 follow-up workflows,
-finalization 3/3, and root DAG exit zero. The scientific integrity validator passed.
-See [STATUS.md](../../STATUS.md) for verified stages, alternate-host recovery, and final validation.
+The helper sets the test's Pegasus/Java paths internally, generates fresh bank
+and statistic files, plans the workflow, and submits it once. It refuses an
+existing `output` directory. Each stage has its own log and the commands are
+recorded in `run-commands.json`. There are no manual environment-variable exports.
 
-For a fresh run after installing the isolated dependencies and applying the
-adaptations, the generation/submission sequence is below. Do not run this over
-an active or existing output directory; use its generated `start` script to resume
-from a rescue checkpoint instead.
+The user-namespace requirement is ordinary native Condor matching for our two
+test pools, which advertise that capability. It excludes workers where that
+attribute is false or absent. A different cluster may need a different native
+requirement or a capability check; this is not automatic capability discovery.
+
+After the root DAG finishes, run in the same activated project:
 
 ```bash
-project=$PWD
-export PATH="$project/local/pycbc-env/bin:$project/local/pegasus/bin:$project/local/workflow-tools/bin:/usr/bin:/bin"
-export JAVA_HOME="$project/local/workflow-tools"
-export PEGASUS_JAVA_HOME="$JAVA_HOME"
-export PEGASUS_PYTHON="$project/local/pycbc-env/bin/python"
-export PYTHONNOUSERSITE=1 PEGASUS_METRICS=false
-export MPLCONFIGDIR="$project/local/pycbc-test/mpl"
-export XDG_CACHE_HOME="$project/local/pycbc-test/cache"
-export TMPDIR="$project/local/tmp"
-eval "$("$project/local/runtime/bin/clusterlink" activate --env "$project/local/pycbc-env")"
-cd "$project/local/pycbc-test"
-bash "$project/local/pycbc-source/examples/search/bank.sh"
-bash "$project/local/pycbc-source/examples/search/stats.sh"
-pycbc_make_offline_search_workflow --workflow-name gw --output-dir output-cache \
-  --config-files analysis.ini plotting.ini executables.ini injections_minimal.ini \
-  --config-overrides "results_page:output-path:$PWD/html-cache" --plan-now
-cd output-cache
-./start
+python /path/to/clusterlink/integration/pycbc/validate.py output --report validation.json
 ```
 
-This uses the upstream bank/statistic generators unchanged, and replaces the
-example's frame download/copy step with the supplied frame-cache interface.
+The validator requires root-DAG success and checks positive finite template
+masses, nonempty finite trigger SNRs for H1/L1/V1 in both search branches, and
+finite injection optimal SNRs. It checks scientific integrity, not equivalence
+to a reference scientific analysis.
 
-Portability fix during acceptance: pip initially selected a glibc 2.34 build of
-cryptography and locally compiled SQLAlchemy C extensions needing glibc 2.38.
-The older su workers cannot use those binaries. Keep the same cryptography
-version but select its `manylinux_2_28_x86_64` wheel; install SQLAlchemy 1.3.24
-with `DISABLE_SQLALCHEMY_CEXT=1` to use its Python fallback. These change package
-builds, not PyCBC algorithms. The initial failed run is retained for diagnosis;
-the resumed workflow completed successfully.
+## Configuration adaptations
 
-During the run, an external process repeatedly renamed ncurses aliases to
-`*_CaseConflict`, breaking the live local environment's Conda inventory. The
-completed workflow explicitly selected the previously validated immutable archive
-`4bf0900e4ab35c9b0a7e8e4aced2f7b3be5260ea367542fc42434c0efdb987ce`
-using `clusterlink activate --env local/pycbc-env --artifact ARCHIVE`. This is an
-explicit snapshot choice, not an integrity-check bypass or automatic fallback.
-The ordinary automatic path was exercised before this external interference.
+- One vanilla Condor site named `clusterlink`, with CondorIO and the optional
+  native worker requirement. No Clusterlink executable paths in the workflow.
+- Execution profiles select this site, remove the site's original accounting
+  group, and request 1 GiB of working disk. Clusterlink adds environment and
+  input-file storage to the disk request.
+- Workflow generators and final HTML assembly use local-universe jobs in the
+  project's environment; their scientific child jobs still use the remote site.
+- Main workflow data discovery uses `FROM_PREGENERATED_LCF_FILES` and selected
+  entries from `/home/ahnitz/gwdata/{H1,L1,V1}.cache`. Data is read-only.
+- Follow-up generators do not call the main datafind machinery, so their frame
+  inputs are declared from the same cache records and staged through CondorIO.
+- Pegasus worker-package transfer and a local SQLite metadata database are
+  configured, with optional upstream telemetry disabled.
 
-The running main DAGMan had cached its original submit defaults. Its 182 already
-planned vanilla submit files were therefore given the same explicit
-`+ClusterlinkArtifact` setting; pending workflow sources were updated consistently.
-Newly started planners/DAGMan processes use the selected private configuration.
+Generated patches are saved in the run's evidence directory. Preparation does
+not modify the source checkout. The checked-in patches record the earlier run;
+paths in fresh patches naturally refer to the new project.
 
-After the root DAG finishes, validate completion and basic scientific-output
-integrity with the isolated environment:
+## Evidence
 
-```bash
-local/pycbc-env/bin/python integration/pycbc/validate.py \
-  local/pycbc-test/output-cache --report local/pycbc-test/validation.json
-```
-
-The validator checks the root DAG exit status, positive finite template masses,
-nonempty finite trigger SNRs in both search branches for all three detectors,
-and finite injection optimal SNRs. `--allow-incomplete` permits an explicitly
-incomplete progress report; it never reports a running workflow as complete.
+The earlier Conda-archive run completed with manual recovery. That history is
+preserved in [the earlier report](../acceptance-before-sif.md). It is not the
+fresh unattended SIF acceptance result. [STATUS.md](../../STATUS.md) tracks the
+current run and remaining limitations.

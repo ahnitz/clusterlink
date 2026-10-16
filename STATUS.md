@@ -42,6 +42,17 @@ reached the same cap, confirming that the larger native capture setting must
 be present from initialization.
 The formerly rejected job (local 617, remote OSG 16043515) then completed
 with exit zero; see `integration/pycbc/hook-output-regression.json`.
+The development run `local/pycbc-unattended` has now completed all 15 DAGs.
+Scientific and report validation passed: 434 templates, 68 injections, all six
+trigger datasets, 166 HTML files, 334 PNG files, and 4,483 local references.
+Its one configuration intervention remains recorded; this is development evidence
+in `integration/pycbc/sif-development-completion.json`.
+
+A new project, `local/pycbc-acceptance` (ID
+`6833f52e85db4427bb924011f218fc76`), was initialized and enrolled using the normal
+CLI, built its own SIF, and submitted once at 09:11:33 local time on 2026-10-16.
+The hook capture cap and native retry/timeout settings were present before
+submission. It is running with zero operator interventions so far.
 No successful unattended full run is claimed yet.
 
 The test launcher also needed a Bash invocation fix before the first submission;

@@ -31,7 +31,7 @@ def running(state):
         return False
 
 
-def configure(state, local_slots=0):
+def configure(state, local_slots=None):
     sites = json.loads((state / "sites.json").read_text())
     for name in ["log", "spool", "execute", "lock", "run"]:
         (state / name).mkdir(exist_ok=True)
@@ -42,7 +42,10 @@ def configure(state, local_slots=0):
         with socket.socket() as s:
             s.bind(("127.0.0.1", 0))
             settings = {"port": s.getsockname()[1]}
-        settings_path.write_text(json.dumps(settings))
+    if local_slots is None:
+        local_slots = settings.get("local_slots", 0)
+    settings["local_slots"] = local_slots
+    settings_path.write_text(json.dumps(settings))
     package_root = str(Path(__file__).resolve().parent.parent)
     shim = state / "remote-gahp"
     shim.write_text("#!/bin/sh\nexport CLUSTERLINK_STATE=" + shlex.quote(str(state)) +

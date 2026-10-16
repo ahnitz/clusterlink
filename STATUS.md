@@ -4,21 +4,23 @@ The package works across both enrolled HTCondor sites. The complete PyCBC
 acceptance workflow is **not finished**: 141/252 main nodes are complete, with
 follow-up workflows and final HTML assembly still pending.
 
-## Current blocker
+## Current recovery
 
 The `su` scheduler became unreachable during the test. SSH still works, but
 its advertised `10.5.0.107:9618` endpoint has no listening socket. Native
-GridManager reports the resource down. Two accepted remote jobs must be
-reconciled when that scheduler returns:
+GridManager reports the resource down. Two old remote allocations remain tracked for cancellation when that scheduler returns:
 
 | Local source | Routed job | Remote su job | Purpose |
 | --- | --- | --- | --- |
 | 277 | 380 | 59270318 | Exclude-zero-lag analysis dependency |
 | 315 | 336 | 59270215 | IFAR report fragment |
 
-State and remote IDs are preserved. Source 277 and its routed job are held
-with the native scheduler-connection error. Source 315 still reports its last
-known running state. No cluster service or administrator configuration was changed.
+The suggested `sugwg-login2` host has a healthy, separate scheduler and shared
+home storage. It was enrolled as `su2` through the normal CLI with a 5 GB cache
+and 10 GB owned-storage budget. The original `su` route is disabled for new jobs.
+PyCBC resumed from rescue checkpoint 002 with 141 completed main nodes preserved;
+new jobs route to su2 or OSG. The old routed jobs are marked for removal and retain
+their remote IDs. No cluster service or administrator configuration was changed.
 
 ## Verified behavior
 
@@ -35,7 +37,7 @@ known running state. No cluster service or administrator configuration was chang
   directories; the portable-Python enrollment path completed a remote job.
 - Failed applications returned nonzero status and stderr without a missing-output
   transfer hold. Cache budget/lease/eviction/corruption behavior has unit coverage.
-- All 24 unit tests pass. The distributable wheel builds successfully.
+- All 32 unit tests pass. The distributable wheel builds successfully.
 
 The head-node helper RSS snapshot was about 18 MiB on su and 20 MiB on osg.
 Owned storage was 2.80 GB and 2.50 GB, with cached environments accounting for
@@ -82,3 +84,18 @@ of the same versions before that snapshot was created.
 Detailed chronological evidence is in
 [acceptance history](integration/acceptance-history.md). Local raw logs and outputs
 are preserved under ignored `local/`; environments and credentials are not committed.
+
+## Alternate-host recovery updates
+
+The resumed workflow reached 161 completed main nodes. Two local follow-up
+generators produced valid child DAX files but their adapted wrappers omitted
+Pegasus's success footer; those wrappers now emit it only after successful
+execution and the two nodes await retry. Fresh planning with the committed local
+site profiles uses the normal Pegasus wrapper.
+
+The first su2 upload exposed a fixed-duration timeout and slow home-directory
+writeback. Uploads now use inactivity timeouts. Automatic cache preparation also
+looks for identical immutable archives in visible enrolled roots under the same
+remote home. It verifies checksums, enforces destination budgets, and uses hard
+links when supported; separate filesystems fall back to upload. The su and su2
+archive paths were verified to share inode 61148753, size 675206181 bytes.

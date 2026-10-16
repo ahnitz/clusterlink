@@ -34,3 +34,13 @@ class PoolTests(unittest.TestCase):
             site['enabled'] = True
             (state/'sites.json').write_text(json.dumps({'site': site}))
             self.assertIn('REQUIREMENTS True &&', configure(state).read_text())
+
+    def test_reconfiguration_preserves_local_slot_setting(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp)
+            (state/'pool.json').write_text(json.dumps({'port': 12345}))
+            (state/'sites.json').write_text('{}')
+            configure(state, local_slots=2)
+            text = configure(state).read_text()
+            self.assertIn('NUM_CPUS = 2', text)
+            self.assertIn('JOB_ROUTER STARTD', text)

@@ -48,6 +48,13 @@ trigger datasets, 166 HTML files, 334 PNG files, and 4,483 local references.
 Its one configuration intervention remains recorded; this is development evidence
 in `integration/pycbc/sif-development-completion.json`.
 
+The older `pycbc-final-run` was stopped after its experimental system removal
+policy deleted source job 1070 without a terminal event reaching DAGMan; its
+remaining DAGs were stale, with no scientific jobs queued. This policy is not
+part of generated Clusterlink configuration. The completed development run also
+retained one cache lease from a rejected pre-fix hook translation; it is recorded
+as a cleanup limitation, not an active scientific job.
+
 A new project, `local/pycbc-acceptance` (ID
 `6833f52e85db4427bb924011f218fc76`), was initialized and enrolled using the normal
 CLI, built its own SIF, and submitted once at 09:11:33 local time on 2026-10-16.

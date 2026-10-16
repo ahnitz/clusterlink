@@ -190,5 +190,9 @@
       "rescue_dag_number": 0,
       "name": "gw.dax-0.dag.metrics"
     }
+  ],
+  "caveats": [
+    "A later Conda clone changed shared-file ctime metadata and caused a second conservative environment image build.",
+    "The failed pre-fix hook translation left one OSG cache lease for source job 715; source 715 later completed via SU. This is not evidence of fully automatic cleanup after a translation failure."
   ]
 }

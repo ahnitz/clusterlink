@@ -2,11 +2,11 @@
 import base64
 import os
 from pathlib import Path
-import shutil
 import re
 import shlex
 import subprocess
 import threading
+import time
 import uuid
 
 
@@ -38,24 +38,37 @@ def run(host, command, mode="exec", payload=b"", timeout=120):
     p, marker = start(host, command, mode)
     writer = None
     errors = []
+    progress = [time.monotonic()]
     if isinstance(payload, Path):
         sink = p.stdin
         p.stdin = None
         def upload():
             try:
                 with payload.open('rb') as source, sink:
-                    shutil.copyfileobj(source, sink, 1024 * 1024)
+                    while chunk := source.read(1024 * 1024):
+                        sink.write(chunk)
+                        progress[0] = time.monotonic()
+                    sink.flush()
+                    progress[0] = time.monotonic()
             except (OSError, ValueError) as error:
                 errors.append(error)
         writer = threading.Thread(target=upload, daemon=True)
         writer.start()
         payload = None
-    try:
-        out, _ = p.communicate(payload, timeout=timeout)
-    except subprocess.TimeoutExpired:
-        p.kill()
-        p.communicate()
-        raise RuntimeError(f"SSH to {host} exceeded {timeout}s; inspect shell startup")
+    while True:
+        wait = max(0.01, timeout - (time.monotonic() - progress[0])) if writer else timeout
+        try:
+            out, _ = p.communicate(payload, timeout=wait)
+            break
+        except subprocess.TimeoutExpired:
+            # A large upload can legitimately exceed the command timeout. Bound
+            # inactivity instead: blocked writes stop updating this timestamp.
+            if writer and not errors and time.monotonic() - progress[0] < timeout:
+                continue
+            p.kill()
+            p.communicate()
+            reason = "without upload progress" if writer else "waiting for the command"
+            raise RuntimeError(f"SSH to {host} exceeded {timeout}s {reason}")
     if writer is not None:
         writer.join(timeout=5)
         if writer.is_alive() or errors:

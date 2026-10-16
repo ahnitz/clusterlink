@@ -131,7 +131,9 @@ Clusterlink owns the cache and its leases. HTCondor owns job/data transport and
 remote scheduler tracking; Pegasus owns workflow dependencies. Only environment
 bundles are cached currently: arbitrary input data still follows ordinary Condor
 transfer. On a cache hit the archive does not cross the workstation-to-cluster
-link, but remote Condor still transfers it to each compute sandbox.
+link, but remote Condor still transfers it to each compute sandbox. Large cache
+uploads use an inactivity timeout, allowing a slow transfer to continue while
+bytes are still progressing.
 
 ## Run the small example
 

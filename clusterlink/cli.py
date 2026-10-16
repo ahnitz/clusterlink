@@ -176,7 +176,9 @@ def main():
     p = sub.add_parser("cache")
     p.add_argument("artifact")
     p.add_argument("--site")
-    sub.add_parser("status")
+    p = sub.add_parser("status", help="Show selected environment, pool state, and linked clusters")
+    p.add_argument('--remote', action='store_true', help='Contact clusters for live cache usage and flush deferred lease releases')
+    p.add_argument('--json', action='store_true', help='Print the overview as JSON')
     p = sub.add_parser('submit')
     p.add_argument('--artifact', help='Use an existing bundle instead of automatically packing the environment')
     p.add_argument('--env', help='Conda environment prefix (default: active environment)')
@@ -195,7 +197,7 @@ def main():
     p.add_argument("--local-slots", type=int, default=0)
     args = parser.parse_args()
     try:
-        state = state_dir(args)
+        state = Path(args.state).resolve() if args.command == "status" else state_dir(args)
         if args.command == 'activate':
             if not args.env or not (Path(args.env) / 'conda-meta').is_dir():
                 raise ValueError('Activate a Conda environment or pass --env PREFIX')
@@ -255,13 +257,9 @@ def main():
             else:
                 subprocess.run(["condor_q"], env=pool.environment(state), check=True)
         else:
-            sites = json.loads((state / "sites.json").read_text())
-            for name, site in sites.items():
-                try:
-                    flush_releases(state, site)
-                    print(json.dumps({"site": name, **remote_call(site, "status")}))
-                except Exception as e:
-                    print(json.dumps({"site": name, "error": str(e)}))
+            from .status import collect, render
+            result = collect(state, remote=args.remote)
+            print(json.dumps(result, indent=2) if args.json else render(result))
     except (ValueError, RuntimeError, OSError, KeyError) as e:
         parser.exit(1, f"clusterlink: {e}\n")
 

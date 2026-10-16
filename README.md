@@ -148,6 +148,27 @@ remote home directory, an identical immutable archive can be linked directly aft
 checksum and storage-budget checks, avoiding another workstation upload. This
 is optional discovery; separate filesystems still work normally.
 
+## Project status
+
+```bash
+clusterlink status                 # Quick local overview; no SSH connections
+clusterlink status --remote        # Also check live remote cache/storage usage
+clusterlink status --json          # Structured output (combine with --remote)
+```
+
+The overview shows the selected state directory and Conda environment, automatic
+packaging versus a pinned archive, the local Condor master state, and all linked
+clusters with their SSH aliases, scheduler types, routing status, remote directories,
+queue limits, and storage budgets. It reports when your shell's active Conda
+environment differs from the configured selection. Environment presence is not a
+full package-integrity check, and master presence is not a scheduler-health check.
+
+`--remote` also flushes completed-job cache releases and reports each unreachable
+site independently. The default works offline and does not create missing state.
+Status uses the same `--state` / `CLUSTERLINK_STATE` selection as other commands;
+project-root discovery is not implemented yet. The previous cache-only JSON-lines
+status output is replaced by this overview; scripts should use `--json`.
+
 ## Run the small example
 
 From the repository, with the environment containing NumPy activated:
@@ -220,7 +241,7 @@ Condor CCB negotiation; universal interactive access is not verified.
   underlying SSH grid transport.
 - Cache uploads enforce configured budgets and checksums. Native submissions
   acquire per-job leases; cleanup records durable local releases, delivered with
-  the next job preparation or `clusterlink status` / `clusterlink cache` contact.
+  the next job preparation or `clusterlink status --remote` / `clusterlink cache` contact.
   SSH outages therefore do not delay completed-job reporting. Until contact is
   restored those entries stay pinned, so eviction remains conservative. Legacy
   explicit `cache` operations retain permanent pins. `submit --artifact` uses

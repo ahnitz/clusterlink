@@ -40,7 +40,7 @@ attempt explicitly selects su. This allows independent foreground work to procee
 without duplicating the old allocation. Earlier completed nodes remain preserved.
 
 Cache cleanup now writes durable local release records and delivers them with
-the next preparation/status/cache contact. An unavailable SSH endpoint therefore
+the next preparation/status --remote/cache contact. An unavailable SSH endpoint therefore
 does not delay completed-job reporting; cached objects remain pinned until release
 is acknowledged. Cache hits update separate LRU metadata, keeping hard-linked
 archives immutable and avoiding repeated cross-cache checksum reads.
@@ -60,7 +60,7 @@ archives immutable and avoiding repeated cross-cache checksum reads.
   directories; the portable-Python enrollment path completed a remote job.
 - Failed applications returned nonzero status and stderr without a missing-output
   transfer hold. Cache budget/lease/eviction/corruption behavior has unit coverage.
-- All 39 unit tests pass. The distributable wheel builds successfully.
+- All 42 unit tests pass. The distributable wheel builds successfully.
 
 Persistent head-node helpers use roughly 17–20 MiB RSS per host. During the
 concurrent follow-up workload, summed RSS including temporary native submission
@@ -151,3 +151,12 @@ Enrollment now sets `blah_child_poll_timeout=120`, below the private GridManager
 180-second deadline. Existing private remote configurations were updated for their
 next helper start; in-flight helpers were not restarted. The setting's seconds
 conversion was checked in [upstream BLAHP](https://github.com/htcondor/BLAH/blob/devel/src/mapped_exec.c).
+
+## Project status overview
+
+`clusterlink status` now reports the selected state directory, configured Conda
+environment and packaging mode, local master state, and linked sites with SSH
+aliases, queue limits, routing status, and storage budgets. It works offline;
+`--remote` adds live usage checks and lease release, while `--json` supports
+scripts. Uninitialized status creates no state. Project-root discovery remains
+a separate pending change.

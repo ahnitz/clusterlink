@@ -165,7 +165,7 @@ def main():
     p.add_argument('--python', choices=['auto', 'portable'], default='auto')
     p.add_argument("--scheduler", choices=["condor", "slurm"])
     p.add_argument("--transport", choices=["auto", "exec", "login"], default="auto")
-    p.add_argument("--remote-dir")
+    p.add_argument("--remote-dir", help="Absolute dedicated remote project directory for cache, staging, helpers, logs, and temporary files (default: unique directory under your home)")
     p.add_argument("--cache-gb", type=float, required=True)
     p.add_argument("--storage-gb", type=float, required=True)
     p.add_argument("--reserve-gb", type=float, default=1)

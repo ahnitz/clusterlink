@@ -29,7 +29,11 @@ Replace the Conda environment name, SSH alias, and budgets with your own.
 `--env` also accepts an explicit environment path. Names resolve through your
 Conda installation and are recorded as absolute paths. Budgets are
 in decimal GB. Use another `enroll` command for each additional cluster.
-Enrollment installs missing helpers in your remote home directory and configures
+Use `--remote-dir /path/to/dedicated-project-directory` during enrollment when
+a cluster requires a different storage location. Choose a separate directory for
+each project; cache, staging, helpers, logs, and submission temporary files belong
+there. The default is a unique directory under your remote home.
+Enrollment installs missing helpers in that directory and configures
 the project automatically. SSH access must work without interactive prompts.
 
 `init` records the environment and creates an ignored `.clusterlink/` directory.

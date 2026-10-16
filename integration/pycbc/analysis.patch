@@ -38,3 +38,16 @@
  channel-name = ${workflow|v1-channel-name}
  
  [calculate_psd]
+@@ -232,3 +229,12 @@
+ [results_page]
+ analysis-title = "PyCBC search"
+ analysis-subtitle = "Small Test Search"
++
++[single_template-h1&plot_singles_timefreq-h1&plot_qscan-h1]
++frame-files = /home/ahnitz/gwdata/O2/H1/1185939456/H-H1_DATASAMPLER_O2_2048HZ-1186738176-4096.hdf5 /home/ahnitz/gwdata/O2/H1/1185939456/H-H1_DATASAMPLER_O2_2048HZ-1186742272-4096.hdf5
++
++[single_template-l1&plot_singles_timefreq-l1&plot_qscan-l1]
++frame-files = /home/ahnitz/gwdata/O2/L1/1185939456/L-L1_DATASAMPLER_O2_2048HZ-1186738176-4096.hdf5 /home/ahnitz/gwdata/O2/L1/1185939456/L-L1_DATASAMPLER_O2_2048HZ-1186742272-4096.hdf5
++
++[single_template-v1&plot_singles_timefreq-v1&plot_qscan-v1]
++frame-files = /home/ahnitz/gwdata/O2/V1/1185939456/V-V1_DATASAMPLER_O2_2048HZ-1186738176-4096.hdf5 /home/ahnitz/gwdata/O2/V1/1185939456/V-V1_DATASAMPLER_O2_2048HZ-1186742272-4096.hdf5

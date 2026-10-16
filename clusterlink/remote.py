@@ -158,6 +158,15 @@ def bootstrap(root, settings, digest, metadata):
     return {'installed_bytes': total, **metadata}
 
 
+def release_many(root, records):
+    for digest, lease in records:
+        if not all(isinstance(value, str) and re.fullmatch(r'[0-9a-f]{64}', value)
+                   for value in (digest, lease)):
+            raise ValueError('Invalid deferred cache release')
+    for digest, lease in records:
+        (root / 'leases' / digest / lease).unlink(missing_ok=True)
+
+
 def main():
     action = sys.argv[1]
     if action == "probe":
@@ -173,6 +182,10 @@ def main():
     settings = json.loads((root / "owner.json").read_text())
     with ExitStack() as streams, (root / ".cache.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
+        if action == 'release-many':
+            release_many(root, json.loads(sys.argv[3]))
+            print(json.dumps({'released': True}))
+            return
         if action == "status":
             print(json.dumps({"cache_used_bytes": size(root / "cache"), "total_bytes": size(root),
                               'active_leases': sum(1 for p in (root / 'leases').glob('*/*') if p.is_file()),
@@ -190,6 +203,8 @@ def main():
             print(json.dumps({'released': True}))
             return
         if action == "check":
+            if len(sys.argv) > 5:
+                release_many(root, json.loads(sys.argv[5]))
             exists = target.exists()
             if exists:
                 verify_cached(root, digest, target)

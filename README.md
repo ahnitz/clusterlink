@@ -209,7 +209,10 @@ Condor CCB negotiation; universal interactive access is not verified.
   have distinct basenames; whole-directory transfers are not supported by the
   underlying SSH grid transport.
 - Cache uploads enforce configured budgets and checksums. Native submissions
-  acquire per-job leases; cleanup releases them, allowing LRU eviction. Legacy
+  acquire per-job leases; cleanup records durable local releases, delivered with
+  the next job preparation or `clusterlink status` / `clusterlink cache` contact.
+  SSH outages therefore do not delay completed-job reporting. Until contact is
+  restored those entries stay pinned, so eviction remains conservative. Legacy
   explicit `cache` operations retain permanent pins. `submit --artifact` uses
   the same per-job leases as automatic packaging.
   `--storage-gb` is not a filesystem quota or a hard limit on scheduler staging.

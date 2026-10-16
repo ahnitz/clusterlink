@@ -44,6 +44,16 @@ class CacheTests(unittest.TestCase):
         self.assertFalse(self.call('check', digest, self.lease)['cached'])
         self.assertTrue(self.call('check', replacement, self.lease)['cached'])
 
+    def test_deferred_release_then_repin_is_atomic(self):
+        digest, _ = self.upload(b'12345678')
+        releases = json.dumps([[digest, self.lease]])
+        self.call('check', digest, self.lease, releases)
+        self.assertTrue((self.root / 'leases' / digest / self.lease).exists())
+        self.call('release-many', releases)
+        self.assertFalse((self.root / 'leases' / digest / self.lease).exists())
+        self.call('release-many', releases)  # Retry after lost acknowledgment.
+        self.call('release-many', json.dumps([['../escape', self.lease]]), success=False)
+
     def test_duplicate_upload_does_not_require_double_capacity(self):
         digest, _ = self.upload(b'12345678')
         result = self.call('upload', digest, 8, self.lease, payload=b'12345678')

@@ -11,6 +11,7 @@ import classad2
 
 from .cli import remote_call
 from .environments import bundle, executable_command, launcher, required_bundle_disk
+from . import leases
 
 
 def remote_output_settings(outputs):
@@ -83,7 +84,9 @@ def prepare(ad, site, state):
         # same large environment over SSH before the first upload completes.
         with (state / ('.upload-' + cache_key + '.lock')).open('a') as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
-            result = remote_call(site, 'check', digest, ident)
+            pending, releases = leases.pending(state, site)
+            result = remote_call(site, 'check', digest, ident, json.dumps(releases))
+            leases.acknowledge(pending)
             if not result['cached']:
                 enrolled = json.loads((state / 'sites.json').read_text())
                 candidates = list(dict.fromkeys(s['root'] for s in enrolled.values()
@@ -143,7 +146,7 @@ def main():
             if isinstance(lease, str):
                 sites = json.loads((state / 'sites.json').read_text())
                 site = sites[ad['ClusterlinkDestination']]
-                remote_call(site, 'release', ad['ClusterlinkCachedEnv'], lease)
+                leases.defer(state, site, ad['ClusterlinkCachedEnv'], lease)
             return
         header, source = re.split(r'\n-{6,}\n', sys.stdin.read(), maxsplit=1)
         route = classad2.parseOne(header)

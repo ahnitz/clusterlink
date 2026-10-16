@@ -122,10 +122,21 @@ def cache(args, state):
         digest = hashlib.file_digest(f, "sha256").hexdigest()
     for name in names:
         site = sites[name]
+        flush_releases(state, site)
         result = remote_call(site, "check", digest)
         if not result["cached"]:
             result = remote_call(site, "upload", digest, artifact.stat().st_size, payload=artifact)
         print(json.dumps({"site": name, "sha256": digest, **result}))
+
+
+def flush_releases(state, site):
+    from . import leases
+    while True:
+        paths, records = leases.pending(state, site)
+        if not paths:
+            return
+        remote_call(site, 'release-many', json.dumps(records))
+        leases.acknowledge(paths)
 
 
 def submit(args, state):
@@ -232,6 +243,7 @@ def main():
             sites = json.loads((state / "sites.json").read_text())
             for name, site in sites.items():
                 try:
+                    flush_releases(state, site)
                     print(json.dumps({"site": name, **remote_call(site, "status")}))
                 except Exception as e:
                     print(json.dumps({"site": name, "error": str(e)}))

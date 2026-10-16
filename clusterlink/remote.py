@@ -66,6 +66,11 @@ def verify_cached(root, digest, target):
         raise RuntimeError('Cached artifact checksum mismatch')
 
 
+def last_used(root, artifact):
+    record = root / 'verified' / artifact.name[:-7]
+    return record.stat().st_mtime if record.exists() else artifact.stat().st_mtime
+
+
 def pin(root, digest, lease):
     if lease:
         if not re.fullmatch(r'[0-9a-f]{64}', lease):
@@ -209,7 +214,8 @@ def main():
             if exists:
                 verify_cached(root, digest, target)
                 pin(root, digest, sys.argv[4] if len(sys.argv) > 4 else None)
-                os.utime(target, None)
+                # Use verification-record mtime for LRU. Touching the archive
+                # invalidates signatures in other caches sharing its inode.
                 remember_verified(root, digest, target)
             print(json.dumps({"cached": exists, "path": str(target)}))
             return
@@ -265,11 +271,12 @@ def main():
             print(json.dumps({'cached': True, 'uploaded_bytes': 0, 'path': str(target)}))
             return
         # LRU eviction considers only entries without outstanding job leases.
-        for f in sorted((root / "cache").glob("*.tar.gz"), key=lambda f: f.stat().st_mtime):
+        for f in sorted((root / "cache").glob("*.tar.gz"), key=lambda f: last_used(root, f)):
             if size(root / "cache") + expected <= settings["cache_bytes"]:
                 break
             if not pinned(root, f):
                 f.unlink()
+                (root / 'verified' / f.name[:-7]).unlink(missing_ok=True)
         if size(root / "cache") + expected > settings["cache_bytes"]:
             raise RuntimeError("Cache full; active/pinned artifacts cannot be evicted")
         if size(root) + expected > settings["storage_bytes"]:

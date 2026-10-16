@@ -29,6 +29,10 @@ the one stalled Syracuse worker. At 01:25 a remote coincidence job was held, exp
 this is native rerouting, distinct from the earlier DAGMan payload retry. This run is now a
 development run with one recorded intervention, not unattended acceptance.
 The preparation helper now installs that policy before planning future runs.
+A fresh project, `local/pycbc-unattended` (ID
+`2f6b6ab1e0e94ec9ab06ed1ff00503c1`), was submitted once at 01:34:58 local time
+on 2026-10-16 with the two-minute held-job timeout installed before image
+build and planning. It has no manual job interventions.
 No successful unattended full run is claimed yet.
 
 The test launcher also needed a Bash invocation fix before the first submission;

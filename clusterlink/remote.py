@@ -13,6 +13,7 @@ import sys
 import time
 import io
 import tarfile
+import tempfile
 
 
 def probe():
@@ -55,13 +56,26 @@ def cache_signature(path):
 def remember_verified(root, digest, target):
     directory = root / 'verified'
     directory.mkdir(exist_ok=True)
-    (directory / digest).write_text(json.dumps(cache_signature(target)))
+    fd, temporary = tempfile.mkstemp(dir=directory)
+    try:
+        with os.fdopen(fd, 'w') as stream:
+            json.dump(cache_signature(target), stream)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, directory / digest)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
 
 
 def verify_cached(root, digest, target):
     record = root / 'verified' / digest
-    if record.exists() and json.loads(record.read_text()) == cache_signature(target):
-        return
+    try:
+        if json.loads(record.read_text()) == cache_signature(target):
+            return
+    except (OSError, ValueError):
+        # Missing or interrupted metadata is only an optimization miss. The
+        # content checksum remains authoritative before the record is rebuilt.
+        pass
     if checksum(target) != digest:
         raise RuntimeError('Cached artifact checksum mismatch')
 

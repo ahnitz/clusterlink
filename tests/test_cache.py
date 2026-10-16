@@ -90,6 +90,16 @@ class CacheTests(unittest.TestCase):
         result = self.call('check', digest, self.lease, success=False)
         self.assertIn(b'checksum mismatch', result.stderr)
 
+    def test_damaged_verification_record_rechecks_content(self):
+        digest, _ = self.upload(b'12345678')
+        record = self.root / 'verified' / digest
+        record.write_text('[interrupted')
+        self.assertTrue(self.call('check', digest, self.lease)['cached'])
+        self.assertIsInstance(json.loads(record.read_text()), list)
+        record.write_text('[interrupted')
+        (self.root / 'cache' / (digest + '.tar.gz')).write_bytes(b'corrupt!')
+        self.call('check', digest, self.lease, success=False)
+
     def test_failed_upload_does_not_publish_partial_artifact(self):
         digest = hashlib.sha256(b'12345678').hexdigest()
         self.call('upload', digest, 8, self.lease, payload=b'bad', success=False)

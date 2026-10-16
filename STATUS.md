@@ -32,11 +32,14 @@ The preparation helper now installs that policy before planning future runs.
 A fresh project, `local/pycbc-unattended` (ID
 `2f6b6ab1e0e94ec9ab06ed1ff00503c1`), was submitted once at 01:34:58 local time
 on 2026-10-16 with the two-minute held-job timeout installed before image
-build and planning. It has no manual job interventions.
+build and planning. It later reached the same hook-capture cap and received
+one recorded configuration intervention; it is also development evidence.
 A later development job exposed HTCondor's default 10 KiB hook-output capture
 limit. Generated project configuration now raises `JOB_ROUTER.PIPE_BUFFER_MAX`
 to 16 MiB. The development pool was reconfigured for a live regression; the
-clean project's configuration and hook implementation remain unchanged.
+hook implementation itself required no changes. The second project later
+reached the same cap, confirming that the larger native capture setting must
+be present from initialization.
 The formerly rejected job (local 617, remote OSG 16043515) then completed
 with exit zero; see `integration/pycbc/hook-output-regression.json`.
 No successful unattended full run is claimed yet.

@@ -85,6 +85,12 @@ def prepare(ad, site, state):
             fcntl.flock(lock, fcntl.LOCK_EX)
             result = remote_call(site, 'check', digest, ident)
             if not result['cached']:
+                enrolled = json.loads((state / 'sites.json').read_text())
+                candidates = list(dict.fromkeys(s['root'] for s in enrolled.values()
+                                               if s['root'] != site['root']))
+                if candidates:
+                    result = remote_call(site, 'reuse', digest, json.dumps(candidates), ident)
+            if not result['cached']:
                 remote_call(site, 'upload', digest, artifact.stat().st_size, ident,
                             payload=artifact)
         ad['ClusterlinkCachedEnv'] = digest

@@ -61,6 +61,47 @@ class CacheTests(unittest.TestCase):
         self.call('upload', digest, 8, self.lease, payload=b'bad', success=False)
         self.assertEqual(list((self.root / 'cache').iterdir()), [])
 
+    def visible_source(self, data=b'12345678'):
+        other = self.home / 'other'
+        (other / 'cache').mkdir(parents=True)
+        (other / 'owner.json').write_text('{}')
+        digest = hashlib.sha256(data).hexdigest()
+        (other / 'cache' / (digest + '.tar.gz')).write_bytes(data)
+        return other, digest
+
+    def test_visible_enrolled_cache_reused_with_lease(self):
+        other, digest = self.visible_source()
+        result = self.call('reuse', digest, json.dumps([str(other)]), self.lease)
+        self.assertTrue(result['cached'])
+        self.assertEqual(result['uploaded_bytes'], 0)
+        self.assertEqual(result['reused_bytes'], 8)
+        self.assertEqual((self.root/'cache'/(digest+'.tar.gz')).read_bytes(), b'12345678')
+        self.assertTrue((self.root/'leases'/digest/self.lease).exists())
+
+    def test_reuse_obeys_budget_and_checksums(self):
+        other, digest = self.visible_source(b'123456789')
+        self.call('reuse', digest, json.dumps([str(other)]), self.lease, success=False)
+        candidate = other/'cache'/(digest+'.tar.gz')
+        candidate.write_bytes(b'bad')
+        self.call('reuse', digest, json.dumps([str(other)]), self.lease, success=False)
+        self.assertEqual(list((self.root/'cache').iterdir()), [])
+
+    def test_reuse_missing_or_outside_home_falls_back(self):
+        digest = hashlib.sha256(b'12345678').hexdigest()
+        result = self.call('reuse', digest, json.dumps(['/tmp', str(self.home/'absent')]), self.lease)
+        self.assertFalse(result['cached'])
+
+    def test_reuse_rejects_cache_directory_symlink_escape(self):
+        with tempfile.TemporaryDirectory() as outside:
+            digest = hashlib.sha256(b'12345678').hexdigest()
+            (Path(outside)/(digest+'.tar.gz')).write_bytes(b'12345678')
+            other = self.home/'linked'
+            other.mkdir()
+            (other/'owner.json').write_text('{}')
+            (other/'cache').symlink_to(outside, target_is_directory=True)
+            result = self.call('reuse', digest, json.dumps([str(other)]), self.lease)
+            self.assertFalse(result['cached'])
+
 
 if __name__ == '__main__':
     unittest.main()

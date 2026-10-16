@@ -1,5 +1,6 @@
 """Self-contained remote enrollment agent; standard library only, no daemon."""
 import fcntl
+from contextlib import ExitStack
 import hashlib
 import json
 import os
@@ -169,7 +170,7 @@ def main():
         print(json.dumps(install(root, json.loads(sys.argv[3]), json.load(sys.stdin))))
         return
     settings = json.loads((root / "owner.json").read_text())
-    with (root / ".cache.lock").open("a") as lock:
+    with ExitStack() as streams, (root / ".cache.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         if action == "status":
             print(json.dumps({"cache_used_bytes": size(root / "cache"), "total_bytes": size(root),
@@ -196,10 +197,34 @@ def main():
                 remember_verified(root, digest, target)
             print(json.dumps({"cached": exists, "path": str(target)}))
             return
-        if action != "upload":
+        if action not in {"upload", "reuse"}:
             raise ValueError("Unknown operation")
-        expected = int(sys.argv[4])
         lease = sys.argv[5] if len(sys.argv) > 5 else None
+        input_stream = sys.stdin.buffer
+        if action == "reuse":
+            # Only probe explicitly enrolled, user-owned roots beneath this
+            # host's home. A shared home is optional, never a prerequisite.
+            source = None
+            for value in json.loads(sys.argv[4]):
+                try:
+                    other = root_path(value)
+                    candidate = other / "cache" / (digest + ".tar.gz")
+                    if ((other / "owner.json").stat().st_uid != os.getuid()
+                            or candidate.is_symlink()
+                            or other not in candidate.resolve().parents
+                            or candidate.stat().st_uid != os.getuid()):
+                        continue
+                    source = streams.enter_context(candidate.open("rb"))
+                    break
+                except (OSError, ValueError):
+                    continue
+            if source is None:
+                print(json.dumps({"cached": False, "reused_bytes": 0}))
+                return
+            input_stream = source
+            expected = os.fstat(source.fileno()).st_size
+        else:
+            expected = int(sys.argv[4])
         if expected <= 0 or expected > settings["cache_bytes"]:
             raise ValueError("Artifact exceeds cache budget")
         if target.exists():
@@ -208,7 +233,7 @@ def main():
             h = hashlib.sha256()
             remaining = expected
             while remaining:
-                chunk = sys.stdin.buffer.read(min(1024 * 1024, remaining))
+                chunk = input_stream.read(min(1024 * 1024, remaining))
                 if not chunk:
                     raise RuntimeError('Incomplete upload')
                 remaining -= len(chunk)
@@ -237,7 +262,7 @@ def main():
         try:
             with temp.open("xb") as out:
                 while received < expected:
-                    chunk = sys.stdin.buffer.read(min(1024 * 1024, expected - received))
+                    chunk = input_stream.read(min(1024 * 1024, expected - received))
                     if not chunk:
                         raise RuntimeError("Incomplete upload")
                     out.write(chunk)
@@ -252,7 +277,10 @@ def main():
             remember_verified(root, digest, target)
         finally:
             temp.unlink(missing_ok=True)
-        print(json.dumps({"cached": False, "uploaded_bytes": received, "path": str(target)}))
+        print(json.dumps({"cached": action == "reuse",
+                          "uploaded_bytes": received if action == "upload" else 0,
+                          "reused_bytes": received if action == "reuse" else 0,
+                          "path": str(target)}))
 
 
 if __name__ == "__main__":

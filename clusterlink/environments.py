@@ -1,4 +1,4 @@
-"""Immutable Conda bundles and launchers for scripts or installed entry points."""
+"""Project environment fingerprints and SIF job launchers."""
 import hashlib
 import json
 import os
@@ -25,49 +25,10 @@ def fingerprint(prefix):
     return h.hexdigest()
 
 
-def bundle(prefix, state, backend='conda', base=None):
-    if backend == 'sif':
-        from .containers import build
-        return build(prefix, state, base)
-    if backend != 'conda':
-        raise ValueError('Unknown environment backend: ' + str(backend))
-    import conda_pack
-    prefix = Path(prefix).resolve()
-    if not (prefix / 'conda-meta').is_dir():
-        raise ValueError('Activate a Conda environment or pass --env PREFIX')
-    artifacts = state / 'artifacts'
-    artifacts.mkdir(parents=True, exist_ok=True)
-    if artifacts == prefix or prefix in artifacts.parents:
-        raise ValueError('Bundle storage must be outside the environment')
-    signature = fingerprint(prefix)
-    key = hashlib.sha256((str(prefix) + signature).encode()).hexdigest()
-    manifest = artifacts / (key + '.manifest.json')
-    if manifest.exists():
-        info = json.loads(manifest.read_text())
-        target = artifacts / (info['sha256'] + '.tar.gz')
-        if target.is_file():
-            with target.open('rb') as f:
-                if hashlib.file_digest(f, 'sha256').hexdigest() == info['sha256']:
-                    return target
-    temp = artifacts / (uuid.uuid4().hex + '.packing.tar.gz')
-    try:
-        try:
-            conda_pack.pack(prefix=str(prefix), output=str(temp))
-        except conda_pack.CondaPackException as error:
-            raise ValueError(f'Cannot bundle this Conda environment: {error}') from error
-        if fingerprint(prefix) != signature:
-            raise ValueError('Environment changed during packing; retry after installs finish')
-        with temp.open('rb') as f:
-            digest = hashlib.file_digest(f, 'sha256').hexdigest()
-        target = artifacts / (digest + '.tar.gz')
-        temp.replace(target)
-        staging = manifest.with_suffix('.' + uuid.uuid4().hex + '.tmp')
-        staging.write_text(json.dumps(dict(source=str(prefix), sha256=digest,
-                                          fingerprint=signature, bytes=target.stat().st_size)))
-        staging.replace(manifest)
-        return target
-    finally:
-        temp.unlink(missing_ok=True)
+def bundle(prefix, state, base=None):
+    """Build or reuse the project's SIF delivery bundle."""
+    from .containers import build
+    return build(prefix, state, base)
 
 
 def required_bundle_disk(artifact):
@@ -77,12 +38,15 @@ def required_bundle_disk(artifact):
         return json.loads(record.read_text())['bytes']
     with tarfile.open(artifact) as archive:
         unpacked = sum(member.size for member in archive if member.isfile())
-        if 'clusterlink-container.json' in archive.getnames():
-            metadata = json.load(archive.extractfile('clusterlink-container.json'))
-            rootfs = metadata['rootfs_bytes']
-            if not isinstance(rootfs, int) or rootfs <= 0:
-                raise ValueError('Invalid container root filesystem size')
-            unpacked += rootfs
+        if not {'clusterlink-container.json', 'environment.sif'}.issubset(archive.getnames()):
+            raise ValueError('Expected a Clusterlink SIF bundle; Conda archives are no longer supported')
+        metadata = json.load(archive.extractfile('clusterlink-container.json'))
+        if metadata.get('backend') != 'sif':
+            raise ValueError('Expected SIF bundle metadata')
+        rootfs = metadata['rootfs_bytes']
+        if not isinstance(rootfs, int) or rootfs <= 0:
+            raise ValueError('Invalid container root filesystem size')
+        unpacked += rootfs
     total = artifact.stat().st_size + unpacked
     temp = record.with_suffix('.' + uuid.uuid4().hex + '.tmp')
     temp.write_text(json.dumps({'bytes': total}))
@@ -142,7 +106,7 @@ def launcher(command, archive='environment.tar.gz', source_prefix=None, staged_s
                     'p.write_bytes(data.replace(old,new)) if b"\\x00" not in data and old in data else None')
             remap += ('"$CLUSTERLINK_ENV/bin/python" -c ' + shlex.quote(code) + ' '
                       + shlex.quote(staged_script) + ' "$source_prefix" "$CLUSTERLINK_ENV/"\n')
-    container = ('if [ -f .clusterlink-env/environment.sif ]; then\n'
+    container = ('[ -f .clusterlink-env/environment.sif ] || { echo "Clusterlink SIF missing" >&2; exit 1; }\n'
         '  mkdir -p .clusterlink-env/tmp .clusterlink-env/cache .clusterlink-env/config\n'
         '  export APPTAINER_TMPDIR="$PWD/.clusterlink-env/tmp"\n'
         '  export APPTAINER_CACHEDIR="$PWD/.clusterlink-env/cache"\n'
@@ -172,15 +136,7 @@ def launcher(command, archive='environment.tar.gz', source_prefix=None, staged_s
         + remap + command + ' "$@"\nCLUSTERLINK_INNER\n'
         '  ./.clusterlink-env/apptainer-runtime/bin/apptainer exec --unsquash --userns --cleanenv --containall '
         '--bind "$PWD:/work" --pwd /work .clusterlink-env/environment.sif /bin/bash /work/.clusterlink-env/run.sh "$@"\n'
-        '  exit $?\nfi\n')
-    return '''#!/bin/bash
-set -euo pipefail
-mkdir .clusterlink-env
-tar -xzf ARCHIVE_PLACEHOLDER -C .clusterlink-env
-export CLUSTERLINK_ENV="$PWD/.clusterlink-env"
-unset PYTHONHOME PYTHONPATH
-export PYTHONNOUSERSITE=1
-"$CLUSTERLINK_ENV/bin/python" "$CLUSTERLINK_ENV/bin/conda-unpack"
-export PATH="$CLUSTERLINK_ENV/bin:$PATH"
-export CONDA_PREFIX="$CLUSTERLINK_ENV"
-'''.replace('ARCHIVE_PLACEHOLDER', shlex.quote(archive)).replace('export CLUSTERLINK_ENV=', container + 'export CLUSTERLINK_ENV=', 1).replace('set -euo pipefail\n', 'set -euo pipefail\n' + failure, 1) + remap + command + ' "$@"\n'
+        '  exit $?\n')
+    return ('#!/bin/bash\nset -euo pipefail\n' + failure
+            + 'mkdir .clusterlink-env\ntar -xzf ' + shlex.quote(archive)
+            + ' -C .clusterlink-env\n' + container)

@@ -1,14 +1,9 @@
 import argparse
-import hashlib
 import json
-import os
 from pathlib import Path
 import re
-import shlex
 import subprocess
 import sys
-import shutil
-import uuid
 
 from . import remote
 from .transport import destination, python_command, run
@@ -99,36 +94,6 @@ def enroll(args, state):
     print(json.dumps({"enrolled": args.name, **site}, indent=2))
 
 
-def pack(args, state):
-    from .environments import bundle
-    import fcntl
-    selection = json.loads((state / 'environment.json').read_text()) if (state / 'environment.json').exists() else {}
-    prefix = args.env or selection.get('prefix') or os.environ.get('CONDA_PREFIX')
-    if not prefix:
-        raise ValueError('Initialize a project with a Conda environment first')
-    if (state / 'project.json').exists() and Path(prefix).resolve() != Path(selection['prefix']):
-        raise ValueError('Packing environment must match the project environment')
-    with (state / '.pack.lock').open('a') as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
-        artifact = bundle(prefix, state, backend=selection.get('backend', 'conda'), base=selection.get('container_base'))
-    print(artifact)
-
-
-def cache(args, state):
-    sites = json.loads((state / "sites.json").read_text())
-    names = [args.site] if args.site else list(sites)
-    artifact = Path(args.artifact).resolve()
-    with artifact.open("rb") as f:
-        digest = hashlib.file_digest(f, "sha256").hexdigest()
-    for name in names:
-        site = sites[name]
-        flush_releases(state, site)
-        result = remote_call(site, "check", digest)
-        if not result["cached"]:
-            result = remote_call(site, "upload", digest, artifact.stat().st_size, payload=artifact)
-        print(json.dumps({"site": name, "sha256": digest, **result}))
-
-
 def flush_releases(state, site):
     from . import leases
     while True:
@@ -151,12 +116,9 @@ def main():
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser('init', help='Initialize this project with an explicit Conda environment')
     p.add_argument('--env', required=True)
-    p.add_argument('--backend', choices=['sif', 'conda'], default='sif')
     p.add_argument('--container-base', help='Apptainer base URI (default: workstation distribution/version)')
     sub.add_parser('deactivate', help='Leave an activated project shell')
     p = sub.add_parser('activate', help='Select a Conda environment for ordinary Condor submissions')
-    p.add_argument('--env', help='Legacy state only; projects use their recorded environment')
-    p.add_argument('--artifact', help='Explicitly pin an existing conda-pack archive for subsequent submissions')
     p = sub.add_parser("enroll")
     p.add_argument("name")
     p.add_argument("--ssh", required=True)
@@ -176,17 +138,10 @@ def main():
     p.add_argument("name")
     p.add_argument('--max-jobs', type=int)
     p.add_argument('--max-idle', type=int)
-    p = sub.add_parser("pack")
-    p.add_argument("--env")
-    p = sub.add_parser("cache")
-    p.add_argument("artifact")
-    p.add_argument("--site")
     p = sub.add_parser("status", help="Show selected environment, pool state, and linked clusters")
     p.add_argument('--remote', action='store_true', help='Contact clusters for live cache usage and flush deferred lease releases')
     p.add_argument('--json', action='store_true', help='Print the overview as JSON')
     p = sub.add_parser('submit')
-    p.add_argument('--artifact', help='Use an existing bundle instead of automatically packing the environment')
-    p.add_argument('--env', help='Conda environment prefix (default: active environment)')
     p.add_argument('--no-cache', action='store_true', help='Stage the environment with every job')
     p.add_argument('--site', default='auto')
     p.add_argument('--cpus', type=int, default=1)
@@ -208,32 +163,13 @@ def main():
         if args.command == 'init':
             if args.state:
                 raise ValueError('init creates .clusterlink in the current project; do not pass --state')
-            print('Initialized ' + str(project.initialize(args.env, args.backend, args.container_base)))
+            print('Initialized ' + str(project.initialize(args.env, args.container_base)))
             return
         if args.command == 'deactivate':
             raise ValueError('Use clusterlink deactivate inside the shell opened by clusterlink activate')
         state = project.discover(args.state) if args.command == 'status' else state_dir(args)
         if args.command == 'activate':
-            if (state / 'project.json').exists():
-                if args.env or args.artifact:
-                    raise ValueError('Project activation uses the environment recorded by init')
-                raise SystemExit(project.activate(state))
-            args.env = args.env or os.environ.get('CONDA_PREFIX')
-            if not args.env or not (Path(args.env) / 'conda-meta').is_dir():
-                raise ValueError('Activate a Conda environment or pass --env PREFIX')
-            selection = {'prefix': str(Path(args.env).resolve())}
-            if args.artifact:
-                artifact = Path(args.artifact).resolve()
-                if not artifact.is_file():
-                    raise ValueError('Environment archive does not exist')
-                selection['artifact'] = str(artifact)
-            save(state / 'environment.json', selection)
-            from . import pool
-            pool.configure(state)
-            if pool.running(state):
-                subprocess.run(['condor_reconfig'], env=pool.environment(state), check=True, stdout=sys.stderr)
-            print('export CONDOR_CONFIG=' + shlex.quote(str(state / 'condor.config')))
-            print('export CLUSTERLINK_STATE=' + shlex.quote(str(state)))
+            raise SystemExit(project.activate(state))
         elif args.command == "site":
             sites = json.loads((state / "sites.json").read_text())
             if args.name not in sites:
@@ -265,16 +201,7 @@ def main():
                 pool.configure(state)
                 if pool.running(state):
                     subprocess.run(['condor_reconfig'], env=pool.environment(state), check=True)
-        elif args.command == "pack":
-            pack(args, state)
-        elif args.command == "cache":
-            cache(args, state)
         elif args.command == 'submit':
-            if (state / 'project.json').exists():
-                prefix = json.loads((state / 'environment.json').read_text())['prefix']
-                if args.env and Path(args.env).resolve() != Path(prefix):
-                    raise ValueError('Submission environment must match the project environment')
-                args.env = prefix
             submit(args, state)
         elif args.command == "pool":
             from . import pool

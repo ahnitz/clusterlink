@@ -4,7 +4,9 @@ Run Conda-based scientific jobs on your SSH-accessible clusters from one project
 folder. Keep using ordinary HTCondor submissions or Pegasus workflows. Clusterlink
 automatically builds a SIF container from your environment, prepares remote caches,
 and manages private configuration.
-No administrator changes or manual environment variables are required.
+SIF is the only execution model. The Conda environment recorded by `init` is
+the source for that image; there is no archive-only mode or per-job environment
+override. No administrator changes or manual environment variables are required.
 
 **Development prototype.** A fresh full PyCBC SIF workflow completed across SU
 and OSG without manual intervention: all 15 DAGs passed, with seven native retry

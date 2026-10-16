@@ -35,25 +35,24 @@ def prepare(ad, site, state):
     # copy transfers directly into the source Iwd, so restore them in the route.
     if isinstance(ad.get('TransferOutputRemaps'), str):
         ad['ClusterlinkOutputRemaps'] = ad['TransferOutputRemaps']
-    # The convenience submit command has already prepared its launcher.
-    if ad.get('ClusterlinkPrepared') is True:
-        return ad
-    prefix = ad.get('ClusterlinkEnvironment')
-    if not isinstance(prefix, str):
-        raise ValueError('No Conda environment selected; run clusterlink activate first')
-    prefix = str(Path(prefix).resolve())
+    from .project import environment_selection
+    selection = environment_selection(state)
+    prefix = str(Path(selection['prefix']).resolve())
+    requested = ad.get('ClusterlinkEnvironment')
+    if isinstance(requested, str) and Path(requested).resolve() != Path(prefix):
+        raise ValueError('Job environment must match the project environment')
+    backend = ad.get('ClusterlinkBackend')
+    if backend not in (None, classad2.Value.Undefined, 'sif'):
+        raise ValueError('Only SIF execution is supported')
+    selected = ad.get('ClusterlinkArtifact')
+    if selected is not None and selected != classad2.Value.Undefined:
+        raise ValueError('Archive overrides are unsupported; use the project environment')
     ident = hashlib.sha256(str(ad.get('GlobalJobId', '')).encode()).hexdigest()
     work = state / 'prepared' / ident
     work.mkdir(parents=True, exist_ok=True)
     with (state / '.pack.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        selected = ad.get('ClusterlinkArtifact')
-        if selected is not None and selected != classad2.Value.Undefined:
-            if not isinstance(selected, str) or not Path(selected).is_file():
-                raise ValueError('ClusterlinkArtifact must name an existing environment bundle')
-            artifact = Path(selected).resolve()
-        else:
-            artifact = bundle(prefix, state, backend=ad.get('ClusterlinkBackend', 'conda'), base=ad.get('ClusterlinkContainerBase'))
+        artifact = bundle(prefix, state, base=selection.get('container_base'))
         environment_disk = required_bundle_disk(artifact)
     with artifact.open('rb') as stream:
         digest = hashlib.file_digest(stream, 'sha256').hexdigest()
@@ -109,7 +108,6 @@ def prepare(ad, site, state):
     ad['TransferExecutable'] = True
     ad['TransferInput'] = ','.join(files)
     ad['ShouldTransferFiles'] = 'YES'
-    ad['ClusterlinkPrepared'] = True
     ad['NodeNumber'] = int(ad.get('RequestCpus', 1))
     if isinstance(ad.get('RequestGPUs'), (int, float)):
         ad['GPUNumber'] = int(ad['RequestGPUs'])

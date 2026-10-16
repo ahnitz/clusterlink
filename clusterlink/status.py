@@ -27,18 +27,16 @@ def master_running(state):
 def collect(state, remote=False):
     selection = read(state / 'environment.json')
     prefix = selection.get('prefix')
-    artifact = selection.get('artifact')
+    supported = selection.get('backend') == 'sif' and not selection.get('artifact')
     active = os.environ.get('CONDA_PREFIX')
     result = {
         'state_directory': str(state),
         'project': read(state / 'project.json'),
         'environment': {
             'prefix': prefix,
-            'backend': selection.get('backend', 'conda') if prefix else None,
+            'backend': 'sif' if prefix and supported else 'unsupported legacy configuration' if prefix else None,
             'conda_metadata_present': bool(prefix and (Path(prefix) / 'conda-meta').is_dir()),
-            'packaging': 'pinned archive' if artifact else 'automatic' if prefix else 'not selected',
-            'artifact': artifact,
-            'artifact_exists': Path(artifact).is_file() if artifact else None,
+            'packaging': 'automatic SIF' if prefix and supported else 'unsupported' if prefix else 'not selected',
             'shell_prefix': active,
             'shell_matches_selection': (Path(active).resolve() == Path(prefix).resolve()) if active and prefix else None,
         },
@@ -65,13 +63,11 @@ def collect(state, remote=False):
 def render(data):
     env, pool_state = data['environment'], data['pool']
     lines = ([f"Project: {data['project']['root']}"] if data.get('project') else []) + [f"State: {data['state_directory']}",
-             f"Conda environment: {env['prefix'] or 'not selected (run clusterlink activate --env PREFIX)'}",
+             f"Conda environment: {env['prefix'] or 'not selected (run clusterlink init --env NAME_OR_PATH)'}",
              f"Packaging: {env['packaging']}",
              f"Backend: {env.get('backend') or 'not selected'}"]
     if env['prefix'] and not env['conda_metadata_present']:
         lines.append('  Selected environment is missing its conda-meta directory.')
-    if env['artifact']:
-        lines.append(f"Archive: {env['artifact']}" + ('' if env['artifact_exists'] else ' (missing)'))
     if env['shell_matches_selection'] is False:
         lines.append(f"Shell Conda environment differs: {env['shell_prefix']}")
     elif not env['shell_prefix']:

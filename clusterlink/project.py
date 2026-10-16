@@ -20,12 +20,6 @@ def discover(explicit=None):
             if Path(recorded) != directory:
                 raise ValueError('Project state was copied or moved; initialize a new project instead of reusing its identity')
             return state
-    # Preserve legacy state only when no project was discovered.
-    if os.environ.get('CLUSTERLINK_STATE'):
-        return Path(os.environ['CLUSTERLINK_STATE']).resolve()
-    legacy = here / 'local/clusterlink'
-    if legacy.is_dir():
-        return legacy
     raise ValueError('No Clusterlink project found; run clusterlink init --env PREFIX')
 
 
@@ -57,7 +51,7 @@ def resolve_environment(value):
     return candidates[0]
 
 
-def initialize(prefix, backend='sif', base=None):
+def initialize(prefix, base=None):
     from .cli import save
     prefix = resolve_environment(prefix)
     if not (prefix / 'conda-meta').is_dir():
@@ -71,7 +65,7 @@ def initialize(prefix, backend='sif', base=None):
         raise ValueError('Project state already exists; refusing to replace it')
     state.mkdir(mode=0o700)
     save(state / 'project.json', {'id': uuid.uuid4().hex, 'root': str(state.parent)})
-    save(state / 'environment.json', {'prefix': str(prefix), 'backend': backend, **({'container_base': base} if base else {})})
+    save(state / 'environment.json', {'prefix': str(prefix), 'backend': 'sif', **({'container_base': base} if base else {})})
     save(state / 'sites.json', {})
     (state / '.gitignore').write_text('*\n')
     return state
@@ -85,20 +79,29 @@ def remote_root(state, home, name):
     return f'{home}/.clusterlink/{name}'
 
 
+def environment_selection(state):
+    """Require the single supported project environment model."""
+    selection = json.loads((state / 'environment.json').read_text())
+    if selection.get('backend') != 'sif' or selection.get('artifact'):
+        raise ValueError('Legacy archive configuration is unsupported; initialize a fresh project with clusterlink init --env NAME_OR_PATH')
+    return selection
+
+
 def activate(state):
     from . import pool
-    selection = json.loads((state / 'environment.json').read_text())
+    if not (state / 'project.json').is_file():
+        raise ValueError('Initialize a project with clusterlink init --env NAME_OR_PATH')
+    selection = environment_selection(state)
     prefix = Path(selection['prefix'])
     if not (prefix / 'conda-meta').is_dir():
         raise ValueError('Recorded Conda environment is missing: ' + str(prefix))
     conda = conda_executable()
-    if selection.get('backend') == 'sif':
-        from .environments import bundle
-        import fcntl
-        print('Preparing project SIF (reused when the environment is unchanged)...', flush=True)
-        with (state / '.pack.lock').open('a') as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX)
-            bundle(prefix, state, backend='sif', base=selection.get('container_base'))
+    from .environments import bundle
+    import fcntl
+    print('Preparing project SIF (reused when the environment is unchanged)...', flush=True)
+    with (state / '.pack.lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        bundle(prefix, state, base=selection.get('container_base'))
     # Validate shell integration before starting the project manager.
     hook = subprocess.check_output([conda, 'shell.bash', 'hook'], text=True)
     script = hook + '\nconda activate ' + shlex.quote(str(prefix)) + ' || exit 1\n'

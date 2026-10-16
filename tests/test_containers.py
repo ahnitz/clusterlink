@@ -21,10 +21,11 @@ class ContainerTests(unittest.TestCase):
     def test_container_disk_includes_unsquashed_rootfs(self):
         with tempfile.TemporaryDirectory() as tmp:
             artifact=Path(tmp)/'image.tar.gz'
-            marker=json.dumps({'rootfs_bytes':100000}).encode()
+            marker=json.dumps({'backend':'sif','rootfs_bytes':100000}).encode()
             with tarfile.open(artifact,'w:gz') as tar:
                 info=tarfile.TarInfo('clusterlink-container.json');info.size=len(marker)
                 tar.addfile(info,io.BytesIO(marker))
+                tar.addfile(tarfile.TarInfo("environment.sif"))
             self.assertEqual(required_bundle_disk(artifact),artifact.stat().st_size+len(marker)+100000)
 
     def test_sif_launcher_preserves_arguments_and_failure_outputs(self):
@@ -53,3 +54,17 @@ exec /bin/bash "$script" "$@"
             self.assertTrue((root/'missing.dat').exists())
             self.assertEqual((root/'.clusterlink-env/apptainer-runtime/x86_64/etc/apptainer/apptainer.conf').read_text(),
                              'mount devpts = no\nmount proc = yes\n')
+
+    def test_archive_without_sif_cannot_fall_back_to_conda_execution(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            artifact = root / 'legacy.tar.gz'
+            with tarfile.open(artifact, 'w:gz') as tar:
+                tar.addfile(tarfile.TarInfo('bin/conda-unpack'))
+            with self.assertRaisesRegex(ValueError, 'SIF bundle'):
+                required_bundle_disk(artifact)
+            result = subprocess.run(['bash'], input=launcher('touch payload-ran', archive=str(artifact)),
+                                    cwd=root, text=True, capture_output=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('SIF missing', result.stderr)
+            self.assertFalse((root / 'payload-ran').exists())

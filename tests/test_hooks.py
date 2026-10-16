@@ -1,3 +1,4 @@
+import json
 import hashlib
 import tempfile
 from pathlib import Path
@@ -24,6 +25,7 @@ class HookTests(unittest.TestCase):
             exe = env / 'bin/search'
             exe.write_text('#!/bin/sh\n')
             exe.chmod(0o700)
+            (root / 'environment.json').write_text(json.dumps({'prefix':str(env),'backend':'sif'}))
             artifact = root / 'bundle.tar.gz'
             artifact.write_bytes(b'test archive')
             ad = classad2.ClassAd({'Cmd': str(exe), 'Iwd': str(root),
@@ -31,7 +33,8 @@ class HookTests(unittest.TestCase):
                  'ClusterlinkArtifact': classad2.Value.Undefined,
                  'BatchExtraSubmitArgs': '+UserChosenAttribute = "preserved"',
                  'Arguments': "'a b' 'quoted'", 'RequestCpus': 4,
-                 'TransferInput': 'data.txt', 'TransferOutput': 'result.txt'})
+                 'TransferInput': 'data.txt', 'TransferOutput': 'nested/result.txt',
+                 'TransferOutputRemaps': 'result.txt=nested/result.txt'})
             with patch('clusterlink.hooks.required_bundle_disk', return_value=2048), patch('clusterlink.hooks.bundle', return_value=artifact), patch(
                     'clusterlink.hooks.remote_call', return_value={'cached': True}) as remote:
                 out = prepare(ad, {'scheduler': 'condor'}, root)
@@ -41,6 +44,7 @@ class HookTests(unittest.TestCase):
             self.assertGreaterEqual(out['RequestDisk'], 65538)
             self.assertEqual(out['TransferInput'], 'data.txt')
             self.assertEqual(out['TransferOutput'], 'result.txt')
+            self.assertEqual(out['ClusterlinkOutputRemaps'], 'result.txt=nested/result.txt')
             self.assertEqual(out['ClusterlinkCachedEnv'], hashlib.sha256(b'test archive').hexdigest())
             self.assertEqual(remote.call_count, 1)
             self.assertIn('bin/search', Path(out['Cmd']).read_text())
@@ -54,24 +58,16 @@ class HookTests(unittest.TestCase):
         self.assertEqual(decoded['ClusterlinkRemoteSubmitArgs'],
                          original['ClusterlinkRemoteSubmitArgs'])
 
-    def test_explicit_archive_does_not_repack_mutable_environment(self):
+    def test_archive_backend_and_environment_overrides_are_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            exe = root / 'bin' / 'python'
-            exe.parent.mkdir()
-            exe.write_text('placeholder')
-            archive = root / 'snapshot.tar.gz'
-            archive.write_bytes(b'snapshot')
-            ad = classad2.ClassAd({'Cmd': str(exe), 'Iwd': tmp,
-                 'GlobalJobId': 'snapshot#1', 'ClusterlinkEnvironment': tmp,
-                 'ClusterlinkArtifact': str(archive), 'TransferOutput': 'nested/result'})
-            with patch('clusterlink.hooks.bundle') as pack, patch(
-                    'clusterlink.hooks.required_bundle_disk', return_value=100), patch(
-                    'clusterlink.hooks.remote_call', return_value={'cached': True}):
-                out = prepare(ad, {'scheduler': 'condor'}, root)
-            pack.assert_not_called()
-            self.assertIn('transfer_output_files = nested/result', out['ClusterlinkRemoteSubmitArgs'])
-            self.assertEqual(out['TransferOutput'], 'result')
+            (root / 'environment.json').write_text(json.dumps({'prefix':tmp,'backend':'sif'}))
+            for override in ({'ClusterlinkArtifact': '/old/archive.tar.gz'},
+                             {'ClusterlinkBackend': 'conda'},
+                             {'ClusterlinkEnvironment': '/different/env'}):
+                with self.subTest(override=override), self.assertRaises(ValueError), patch('clusterlink.hooks.bundle') as build:
+                    prepare(classad2.ClassAd(override), {}, root)
+                build.assert_not_called()
 
     def test_hold_counters_and_nested_lists_survive_hook_serialization(self):
         ad = classad2.ClassAd({'NumHoldsByReason': classad2.ClassAd({'UserRequest': 1}),
@@ -83,15 +79,6 @@ class HookTests(unittest.TestCase):
         self.assertEqual(decoded['NumHoldsByReason']['UserRequest'], 1)
         self.assertEqual(decoded['Items'][0]['message'], 'line one\nline two')
 
-    def test_prepared_convenience_submission_is_unchanged(self):
-        ad = classad2.ClassAd({'ClusterlinkPrepared': True, 'Cmd': 'launch.sh'})
-        self.assertIs(prepare(ad, {}, Path('/unused')), ad)
-
-    def test_preserves_local_output_mapping_through_router_conversion(self):
-        ad = classad2.ClassAd({'ClusterlinkPrepared': True,
-             'TransferOutputRemaps': 'result=nested/result'})
-        out = prepare(ad, {}, Path('/unused'))
-        self.assertEqual(out['ClusterlinkOutputRemaps'], 'result=nested/result')
 
 
 if __name__ == '__main__':

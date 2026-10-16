@@ -1,6 +1,5 @@
 """Convenience submission through the same native hook used by workflow engines."""
 import json
-import os
 from pathlib import Path
 import re
 import shutil
@@ -10,17 +9,11 @@ from .pool import environment
 
 
 def submit(args, state):
-    prefix=Path(args.env or os.environ.get('CONDA_PREFIX','')).resolve()
-    if not (prefix/'conda-meta').is_dir():
-        raise ValueError('Activate a Conda environment or pass --env PREFIX')
-    # This command selects its own environment; do not inherit an archive
-    # selected for a different environment by ordinary condor_submit defaults.
-    artifact_attribute = '+ClusterlinkArtifact = undefined'
-    if args.artifact:
-        artifact = Path(args.artifact).resolve()
-        if not artifact.is_file():
-            raise ValueError('Environment artifact must exist')
-        artifact_attribute = '+ClusterlinkArtifact = ' + json.dumps(str(artifact))
+    from .project import environment_selection
+    selection = environment_selection(state)
+    prefix = Path(selection['prefix']).resolve()
+    if not (prefix / 'conda-meta').is_dir():
+        raise ValueError('The project Conda environment is missing')
     sites=json.loads((state/'sites.json').read_text())
     if args.site != 'auto' and args.site not in sites:
         raise ValueError('Unknown destination')
@@ -72,7 +65,6 @@ request_disk = {args.disk_mb * 1024}
 +ClusterlinkEligible = True
 +ClusterlinkSite = {json.dumps(args.site)}
 +ClusterlinkNoCache = {str(args.no_cache)}
-{artifact_attribute}
 queue
 '''
     path=folder/'job.sub';path.write_text(description)

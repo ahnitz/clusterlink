@@ -26,13 +26,13 @@ class StatusTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             state = Path(tmp)
             selected = state / 'science'; (selected / 'conda-meta').mkdir(parents=True)
-            (state / 'environment.json').write_text(json.dumps({'prefix': str(selected), 'artifact': str(state/'missing.tar.gz')}))
+            (state / 'environment.json').write_text(json.dumps({'prefix': str(selected), 'backend': 'sif'}))
             (state / 'sites.json').write_text(json.dumps({'test': {'ssh':'my-alias','scheduler':'condor','enabled':False,'root':'/home/user/cache','max_jobs':10,'max_idle':2,'limits':{'cache_bytes':5e9,'storage_bytes':10e9}}}))
             with patch.dict('os.environ', {'CONDA_PREFIX': str(state/'other')}), patch('clusterlink.cli.remote_call') as remote:
                 result = collect(state)
             remote.assert_not_called()
             self.assertFalse(result['environment']['shell_matches_selection'])
-            self.assertFalse(result['environment']['artifact_exists'])
+            self.assertEqual(result['environment']['packaging'], 'automatic SIF')
             self.assertEqual(result['environment']['prefix'], str(selected))
             text = render(result)
             self.assertIn('disabled for new jobs', text)

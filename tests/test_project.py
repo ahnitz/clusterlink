@@ -33,9 +33,10 @@ class ProjectTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);env=root/'env';(env/'conda-meta').mkdir(parents=True)
             conda=root/'conda';conda.touch()
-            with patch('pathlib.Path.cwd',return_value=root):state=project.initialize(env, backend='conda')
-            with patch.dict(os.environ,{'CONDA_EXE':str(conda)}),patch('clusterlink.project.subprocess.check_output',return_value='# conda hook'),patch('clusterlink.project.subprocess.call',return_value=0) as shell,patch('clusterlink.pool.configure'),patch('clusterlink.pool.running',return_value=False),patch('clusterlink.pool.start') as start:
+            with patch('pathlib.Path.cwd',return_value=root):state=project.initialize(env)
+            with patch('clusterlink.environments.bundle') as build,patch.dict(os.environ,{'CONDA_EXE':str(conda)}),patch('clusterlink.project.subprocess.check_output',return_value='# conda hook'),patch('clusterlink.project.subprocess.call',return_value=0) as shell,patch('clusterlink.pool.configure'),patch('clusterlink.pool.running',return_value=False),patch('clusterlink.pool.start') as start:
                 self.assertEqual(project.activate(state),0)
+            build.assert_called_once_with(env, state, base=None)
             start.assert_called_once_with(state)
             script=(state/'shell.bash').read_text()
             self.assertIn('conda activate '+str(env),script)
@@ -60,3 +61,10 @@ class ProjectTests(unittest.TestCase):
             info['envs_dirs'].append(str(second.parent))
             with patch('clusterlink.project.conda_executable',return_value='/conda'),patch('clusterlink.project.subprocess.check_output',return_value=json.dumps(info)),self.assertRaisesRegex(ValueError,'ambiguous'):
                 project.resolve_environment('science')
+
+    def test_legacy_archive_project_is_rejected_before_activation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'environment.json').write_text(json.dumps({'prefix': tmp, 'backend': 'conda'}))
+            with self.assertRaisesRegex(ValueError, 'fresh project'):
+                project.environment_selection(root)

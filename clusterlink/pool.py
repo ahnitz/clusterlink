@@ -119,18 +119,12 @@ CLUSTERLINK_HOOK_JOB_CLEANUP = {cleanup}
 """
     selected = state / 'environment.json'
     if selected.exists():
-        selection = json.loads(selected.read_text())
+        from .project import environment_selection
+        selection = environment_selection(state)
         prefix = selection['prefix']
-        text += '\nSUBMIT_ATTRS = ClusterlinkBackend, ClusterlinkContainerBase\n'
-        text += 'ClusterlinkBackend = ' + json.dumps(selection.get('backend', 'conda')) + '\n'
-        if selection.get('container_base'):
-            text += 'ClusterlinkContainerBase = ' + json.dumps(selection['container_base']) + '\n'
-        text += '\nSUBMIT_ATTRS = $(SUBMIT_ATTRS), ClusterlinkEnvironment, ClusterlinkEligible\n'
+        text += '\nSUBMIT_ATTRS = ClusterlinkEnvironment, ClusterlinkEligible\n'
         text += 'ClusterlinkEnvironment = ' + json.dumps(prefix) + '\n'
         text += 'ClusterlinkEligible = True\nJOB_ROUTER_HOOK_KEYWORD = CLUSTERLINK\n'
-        if selection.get('artifact'):
-            text += 'SUBMIT_ATTRS = $(SUBMIT_ATTRS), ClusterlinkArtifact\n'
-            text += 'ClusterlinkArtifact = ' + json.dumps(selection['artifact']) + '\n'
         text += 'CLUSTERLINK_HOOK_TRANSLATE_JOB = ' + str(hook) + '\n'
         text += 'CLUSTERLINK_HOOK_JOB_CLEANUP = ' + str(cleanup) + '\n'
     for name, site in sites.items():

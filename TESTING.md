@@ -74,3 +74,38 @@ to PyCBC, modify the test configuration, and replace hardcoded frame-data lookup
 with cache files in `/home/ahnitz/gwdata`. Keep all other changes minimal, retain an
 exact patch, and do not modify the shared frame data. This data exception does
 not permit reuse of workstation software outside the isolated test environment.
+
+## Scale validation still required
+
+The current SSH batch path submits one native scheduler job per routed job.
+Large total job counts and high submission rates are different requirements:
+20–30k queued, hour-long jobs may be tractable with bounded routing, while the
+same number of second-long jobs can be dominated by preparation and transfer.
+No 20–30k-job capacity or throughput claim has been validated.
+
+The existing preparation hook fingerprints the environment, reads the bundle to
+compute its digest, and checks/pins the remote cache for each job. The package
+lock serializes environment preparation; the per-site upload lock serializes
+cache checks/uploads. Persistent native helpers handle scheduler communication,
+but these hook costs remain even when the image is already cached. Input/output
+transfers and scheduler limits can also dominate. Avoid increasing route limits
+blindly: they bound pressure on the user's submission host and storage.
+
+Before recommending large campaigns:
+
+1. Measure warm-cache preparation time, image bytes read, SSH calls, and sustained
+   submission/completion rate with bounded synthetic jobs, starting small.
+2. Test a larger local backlog separately from remote concurrency. Increase the
+   latter only within site policies; retain native `MaxJobs`/`MaxIdleJobs` limits.
+3. Measure login-node CPU/memory, local manager memory, staging high-water usage,
+   and behavior across disconnects and failed submissions. Check for duplicate
+   execution and leaked cache leases after draining the queue.
+4. Remove repeated immutable-image verification overhead where measurements
+   justify it, preserving environment-change detection and cache leases. Keep
+   scheduling, throttling, and retries in HTCondor/Pegasus.
+5. Benchmark Pegasus task clustering separately if scientific tasks are short
+   and combining them into fewer scheduler jobs is acceptable.
+
+HTCondor documents route backpressure in its
+[Job Router manual](https://htcondor.readthedocs.io/en/main/grid-computing/job-router.html).
+This plan does not authorize an unbounded load test on shared login nodes.

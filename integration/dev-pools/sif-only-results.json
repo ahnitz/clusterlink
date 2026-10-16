@@ -1,0 +1,286 @@
+{
+  "project": {
+    "id": "934b9bacf38d4359a6cac3090b18c84a",
+    "root": "/home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/dev-pools-test"
+  },
+  "results": [
+    {
+      "case": "automatic-dev1",
+      "result": {
+        "token": "automatic-dev1",
+        "sum": 15.0,
+        "sum_squares": 55.0,
+        "hostname": "gravity-dev1.syr.edu",
+        "python": "/opt/clusterlink/env/bin/python",
+        "prefix": "/opt/clusterlink/env",
+        "glibc": [
+          "glibc",
+          "2.42"
+        ],
+        "pycbc": "0.0a1",
+        "threads": {
+          "OMP_NUM_THREADS": "1",
+          "OPENBLAS_NUM_THREADS": "1"
+        }
+      },
+      "remote_job": {
+        "ClusterId": 22,
+        "ClusterlinkDestination": "dev1",
+        "ExitCode": 0,
+        "GridJobId": "batch condor 127.0.0.1_33791_clusterlink-ahnitz-934b9bacf38d4359a6cac3090b18c84a_gravity-dev2.syr.edu_22.0_1792171266 condor/102483//",
+        "Iwd": "/home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/dev-pools-test/post-sif-only/automatic-dev1",
+        "JobStatus": 4,
+        "JobUniverse": 9
+      }
+    },
+    {
+      "case": "automatic-dev3",
+      "result": {
+        "token": "automatic-dev3",
+        "sum": 15.0,
+        "sum_squares": 55.0,
+        "hostname": "gravity-dev3.syr.edu",
+        "python": "/opt/clusterlink/env/bin/python",
+        "prefix": "/opt/clusterlink/env",
+        "glibc": [
+          "glibc",
+          "2.42"
+        ],
+        "pycbc": "0.0a1",
+        "threads": {
+          "OMP_NUM_THREADS": "1",
+          "OPENBLAS_NUM_THREADS": "1"
+        }
+      },
+      "remote_job": {
+        "ClusterId": 23,
+        "ClusterlinkDestination": "dev3",
+        "ExitCode": 0,
+        "GridJobId": "batch condor 127.0.0.1_33791_clusterlink-ahnitz-934b9bacf38d4359a6cac3090b18c84a_gravity-dev2.syr.edu_23.0_1792171267 condor/94764//",
+        "Iwd": "/home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/dev-pools-test/post-sif-only/automatic-dev3",
+        "JobStatus": 4,
+        "JobUniverse": 9
+      }
+    },
+    {
+      "case": "automatic-dev4",
+      "result": {
+        "token": "automatic-dev4",
+        "sum": 15.0,
+        "sum_squares": 55.0,
+        "hostname": "gravity-dev4.syr.edu",
+        "python": "/opt/clusterlink/env/bin/python",
+        "prefix": "/opt/clusterlink/env",
+        "glibc": [
+          "glibc",
+          "2.42"
+        ],
+        "pycbc": "0.0a1",
+        "threads": {
+          "OMP_NUM_THREADS": "1",
+          "OPENBLAS_NUM_THREADS": "1"
+        }
+      },
+      "remote_job": {
+        "ClusterId": 24,
+        "ClusterlinkDestination": "dev4",
+        "ExitCode": 0,
+        "GridJobId": "batch condor 127.0.0.1_33791_clusterlink-ahnitz-934b9bacf38d4359a6cac3090b18c84a_gravity-dev2.syr.edu_24.0_1792171267 condor/11//",
+        "Iwd": "/home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/dev-pools-test/post-sif-only/automatic-dev4",
+        "JobStatus": 4,
+        "JobUniverse": 9
+      }
+    },
+    {
+      "case": "targeted-dev1",
+      "result": {
+        "token": "targeted-dev1",
+        "sum": 15.0,
+        "sum_squares": 55.0,
+        "hostname": "gravity-dev1.syr.edu",
+        "python": "/opt/clusterlink/env/bin/python",
+        "prefix": "/opt/clusterlink/env",
+        "glibc": [
+          "glibc",
+          "2.42"
+        ],
+        "pycbc": "0.0a1",
+        "threads": {
+          "OMP_NUM_THREADS": "1",
+          "OPENBLAS_NUM_THREADS": "1"
+        }
+      },
+      "remote_job": {
+        "ClusterId": 16,
+        "ClusterlinkDestination": "dev1",
+        "ExitCode": 0,
+        "GridJobId": "batch condor 127.0.0.1_33791_clusterlink-ahnitz-934b9bacf38d4359a6cac3090b18c84a_gravity-dev2.syr.edu_16.0_1792171147 condor/102482//",
+        "Iwd": "/home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/dev-pools-test/post-sif-only/targeted-dev1",
+        "JobStatus": 4,
+        "JobUniverse": 9
+      }
+    },
+    {
+      "case": "targeted-dev3",
+      "result": {
+        "token": "targeted-dev3",
+        "sum": 15.0,
+        "sum_squares": 55.0,
+        "hostname": "gravity-dev3.syr.edu",
+        "python": "/opt/clusterlink/env/bin/python",
+        "prefix": "/opt/clusterlink/env",
+        "glibc": [
+          "glibc",
+          "2.42"
+        ],
+        "pycbc": "0.0a1",
+        "threads": {
+          "OMP_NUM_THREADS": "1",
+          "OPENBLAS_NUM_THREADS": "1"
+        }
+      },
+      "remote_job": {
+        "ClusterId": 17,
+        "ClusterlinkDestination": "dev3",
+        "ExitCode": 0,
+        "GridJobId": "batch condor 127.0.0.1_33791_clusterlink-ahnitz-934b9bacf38d4359a6cac3090b18c84a_gravity-dev2.syr.edu_17.0_1792171147 condor/94763//",
+        "Iwd": "/home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/dev-pools-test/post-sif-only/targeted-dev3",
+        "JobStatus": 4,
+        "JobUniverse": 9
+      }
+    },
+    {
+      "case": "targeted-dev4",
+      "result": {
+        "token": "targeted-dev4",
+        "sum": 15.0,
+        "sum_squares": 55.0,
+        "hostname": "gravity-dev4.syr.edu",
+        "python": "/opt/clusterlink/env/bin/python",
+        "prefix": "/opt/clusterlink/env",
+        "glibc": [
+          "glibc",
+          "2.42"
+        ],
+        "pycbc": "0.0a1",
+        "threads": {
+          "OMP_NUM_THREADS": "1",
+          "OPENBLAS_NUM_THREADS": "1"
+        }
+      },
+      "remote_job": {
+        "ClusterId": 18,
+        "ClusterlinkDestination": "dev4",
+        "ExitCode": 0,
+        "GridJobId": "batch condor 127.0.0.1_33791_clusterlink-ahnitz-934b9bacf38d4359a6cac3090b18c84a_gravity-dev2.syr.edu_18.0_1792171147 condor/10//",
+        "Iwd": "/home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/dev-pools-test/post-sif-only/targeted-dev4",
+        "JobStatus": 4,
+        "JobUniverse": 9
+      }
+    }
+  ],
+  "all_passed": true,
+  "implementation_commit": "443b77f",
+  "status": {
+    "state_directory": "/home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/dev-pools-test/.clusterlink",
+    "project": {
+      "id": "934b9bacf38d4359a6cac3090b18c84a",
+      "root": "/home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/dev-pools-test"
+    },
+    "environment": {
+      "prefix": "/home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/pycbc-acceptance/.env",
+      "backend": "sif",
+      "conda_metadata_present": true,
+      "packaging": "automatic SIF",
+      "shell_prefix": "/home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/pycbc-acceptance/.env",
+      "shell_matches_selection": true
+    },
+    "pool": {
+      "configured": true,
+      "master_running": true
+    },
+    "sites": [
+      {
+        "ssh": "dev1",
+        "scheduler": "condor",
+        "root": "/home/ahnitz/.clusterlink/projects/934b9bacf38d4359a6cac3090b18c84a/dev1",
+        "max_jobs": 1,
+        "max_idle": 1,
+        "name": "dev1",
+        "enabled": true,
+        "limits": {
+          "cache_bytes": 2000000000,
+          "storage_bytes": 5000000000,
+          "reserve_bytes": 1000000000
+        },
+        "remote": {
+          "cache_used_bytes": 751756136,
+          "total_bytes": 751940914,
+          "active_leases": 0,
+          "cache_bytes": 2000000000,
+          "storage_bytes": 5000000000,
+          "reserve_bytes": 1000000000
+        }
+      },
+      {
+        "ssh": "dev3",
+        "scheduler": "condor",
+        "root": "/home/ahnitz/.clusterlink/projects/934b9bacf38d4359a6cac3090b18c84a/dev3",
+        "max_jobs": 1,
+        "max_idle": 1,
+        "name": "dev3",
+        "enabled": true,
+        "limits": {
+          "cache_bytes": 2000000000,
+          "storage_bytes": 5000000000,
+          "reserve_bytes": 1000000000
+        },
+        "remote": {
+          "cache_used_bytes": 751756136,
+          "total_bytes": 751940910,
+          "active_leases": 0,
+          "cache_bytes": 2000000000,
+          "storage_bytes": 5000000000,
+          "reserve_bytes": 1000000000
+        }
+      },
+      {
+        "ssh": "dev4",
+        "scheduler": "condor",
+        "root": "/home/ahnitz/.clusterlink/projects/934b9bacf38d4359a6cac3090b18c84a/dev4",
+        "max_jobs": 1,
+        "max_idle": 1,
+        "name": "dev4",
+        "enabled": true,
+        "limits": {
+          "cache_bytes": 2000000000,
+          "storage_bytes": 5000000000,
+          "reserve_bytes": 1000000000
+        },
+        "remote": {
+          "cache_used_bytes": 751756136,
+          "total_bytes": 751940912,
+          "active_leases": 0,
+          "cache_bytes": 2000000000,
+          "storage_bytes": 5000000000,
+          "reserve_bytes": 1000000000
+        }
+      }
+    ]
+  },
+  "tests_passed": 50,
+  "wheel_build_passed": true,
+  "existing_sif_project_reactivated": true,
+  "image": {
+    "backend": "sif",
+    "base": "docker://fedora:43",
+    "runtime_version": "1.5.4",
+    "environment_prefix": "/opt/clusterlink/env",
+    "rootfs_bytes": 2082012016,
+    "source": "/home/ahnitz/projects/claude/searchdev/personal-cluster-federation/local/pycbc-acceptance/.env",
+    "fingerprint": "55ade8f7600ecee32e5290c036b3b7b89d9ecabc145bfdc6ca4a500820dd7134",
+    "sif_sha256": "0bd4f4f36d2d1980f724ce471931fc8060b3d536353c6fd8c5e17b28247636d2",
+    "sha256": "a2f44802a7bf515351d98466e7cb3d1455ee3a9993af62409f99794595b7a95d"
+  },
+  "artifact_count": 1
+}

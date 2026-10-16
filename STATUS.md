@@ -26,6 +26,24 @@ Retries recovered worker container incompatibility and scheduler/storage
 failures. This establishes an unattended end-to-end result, not failure-free
 infrastructure or equivalence to a reference scientific analysis.
 
+## Single SIF model and workstation pools
+
+SIF is now the only supported execution model. The project-selected Conda
+environment builds its image automatically. Archive execution, archive pinning,
+manual pack/cache commands, per-job environment overrides, and legacy activation
+have been removed. Existing SIF projects reactivate and reuse their images;
+legacy archive configurations require a fresh project initialization.
+
+The small HTCondor pools at `dev1`, `dev3`, and `dev4` passed six probes before
+simplification and six after: one targeted and one automatically routed job per
+pool in each run. All returned correct NumPy/PyCBC results through CondorIO,
+using the bundled SIF/runtime without host Apptainer installations. CPU limits
+were preserved, one image was reused, and all cache leases were released.
+No host configuration changes, holds, or manual recovery were required.
+The empty test manager was stopped after validation. All 50 tests and the wheel
+build pass. See [initial results](integration/dev-pools/initial-results.json) and
+[SIF-only results](integration/dev-pools/sif-only-results.json).
+
 ## Remote storage correction
 
 Enrollment accepts `--remote-dir /absolute/dedicated/project/path`; the default

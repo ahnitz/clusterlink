@@ -1,0 +1,18 @@
+{
+  "scope": "Local warm-cache read-only preparation components, not end-to-end throughput",
+  "artifact_bytes": 751755770,
+  "samples": [
+    {
+      "fingerprint_seconds": 0.2114291219622828,
+      "digest_seconds": 0.40630872402107343
+    },
+    {
+      "fingerprint_seconds": 0.2034143290366046,
+      "digest_seconds": 0.39490835601463914
+    },
+    {
+      "fingerprint_seconds": 0.20193683000979945,
+      "digest_seconds": 0.39543863001745194
+    }
+  ]
+}

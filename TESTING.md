@@ -109,3 +109,11 @@ Before recommending large campaigns:
 HTCondor documents route backpressure in its
 [Job Router manual](https://htcondor.readthedocs.io/en/main/grid-computing/job-router.html).
 This plan does not authorize an unbounded load test on shared login nodes.
+
+A read-only warm-cache sample on the development workstation measured about
+0.2 seconds for environment fingerprinting and 0.4 seconds for hashing a
+751,755,770-byte bundle per job (three samples; see
+[instrumentation evidence](integration/probes/local-preparation-timing.json)).
+At 30k jobs that digest step alone reads about 22.6 TB through the file API;
+filesystem caching may avoid physical disk reads. These component timings do
+not establish an end-to-end submission rate or a hard throughput limit.

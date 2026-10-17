@@ -1,5 +1,32 @@
 # Clusterlink acceptance status
 
+## Mixed Pegasus sites and local helper admission (0.1.8)
+
+One eligibility predicate now governs routing, private-startd admission, and
+CondorIO submit validation. Eligible ordinary vanilla jobs still route by default;
+named Pegasus jobs route only for `pegasus_site = "clusterlink"`. Explicit
+ineligibility opts out. Shared/symlink jobs retain their local scratch settings
+and can run on explicitly allocated private local slots. With no local slots,
+unrouted vanilla submissions are rejected with an actionable message, rather
+than silently idling. The default remains no private vanilla workers; automatic
+system-pool integration and cross-project resource accounting are not implemented.
+
+`pool configure --local-helpers N` persists a separate per-schedd local-universe
+job-count cap (default min(8, host logical CPUs)). Local slot and helper counts
+appear in status. Invalid negative slots or nonpositive helper limits fail before
+settings are written. Scheduler-universe policy is unchanged.
+
+Validation: 81 tests pass, including native ClassAd evaluation of generated rules
+for all supported site/eligibility/universe combinations, explicit local slots,
+and helper admission at the cap. The 0.1.8 wheel builds. An isolated one-slot
+native pool completed shared and symlink vanilla jobs plus a local-universe
+helper with exit zero; a clusterlink-site job remained idle rather than executing
+on that slot. No remote jobs were submitted and the test manager was stopped.
+[Probe evidence](integration/probes/mixed-sites-018.json). This is not a full
+mixed scientific workflow or a multi-project capacity test. The
+[PyCBC handoff](integration/pycbc/mixed-sites.md) describes the fresh workflow test
+and the required explicit local execution budget.
+
 ## Native remote attributes by site (0.1.7)
 
 Job attributes named `REMOTE_<ClassAdAttribute>_<enrolled-site>` now select a

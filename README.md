@@ -113,8 +113,14 @@ Select that site for child workflows too, and generate a fresh workflow plan;
 previously generated shared-filesystem submit files cannot be reused. Routed jobs
 with `remote_initialdir` are rejected with an explanation.
 Pegasus manages dependencies; HTCondor handles routing and remote job tracking.
-Local-universe workflow helpers use HTCondor’s detected host resources; no manual
-memory or slot edits are needed. The project manager does not replace or change
+Local-universe workflow helpers use HTCondor’s detected host resources, with a
+per-project concurrent helper limit of min(8, host CPUs). Configure it with
+`clusterlink pool configure --local-helpers N` and reactivate.
+Named Pegasus sites other than `clusterlink` are not routed. Mixed shared/remote
+workflows need an explicit local execution budget; without local slots, unrouted
+vanilla submissions fail with an explanation. See the
+[mixed-site PyCBC handoff](integration/pycbc/mixed-sites.md) for setup and limits.
+Private local slots are not coordinated with other projects or the system pool. The project manager does not replace or change
 the existing system pool’s resource policies.
 
 When finished with the shell:

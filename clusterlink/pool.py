@@ -34,7 +34,15 @@ def running(state):
         return False
 
 
-def configure(state, local_slots=None):
+def routing_eligibility(prefix=""):
+    """One predicate for routing, local admission, and submit validation."""
+    return (f'({prefix}ClusterlinkEligible =?= True) && '
+            f'({prefix}JobUniverse == 5) && '
+            f'(isUndefined({prefix}pegasus_site) || '
+            f'({prefix}pegasus_site =?= "clusterlink"))')
+
+
+def configure(state, local_slots=None, local_helpers=None):
     sites = json.loads((state / "sites.json").read_text())
     for name in ["log", "spool", "execute", "lock", "run"]:
         (state / name).mkdir(exist_ok=True)
@@ -47,6 +55,11 @@ def configure(state, local_slots=None):
             settings = {"port": s.getsockname()[1]}
     if local_slots is None:
         local_slots = settings.get("local_slots", 0)
+    if local_helpers is None:
+        local_helpers = settings.get("local_helpers", min(8, os.cpu_count() or 1))
+    if local_slots < 0 or local_helpers < 1:
+        raise ValueError('local-slots must be nonnegative and local-helpers must be positive')
+    settings["local_helpers"] = local_helpers
     settings["local_slots"] = local_slots
     settings_path.write_text(json.dumps(settings))
     package_root = str(Path(__file__).resolve().parent.parent)
@@ -109,16 +122,22 @@ GRIDMANAGER_SELECTION_EXPR = Owner
 JOB_ROUTER_LOG = {state}/log/JobRouterLog
 JOB_ROUTER_LOCK = {state}/lock/JobRouterLock
 JOB_ROUTER_ROUND_ROBIN_SELECTION = True
-JOB_ROUTER_SOURCE_JOB_CONSTRAINT = ClusterlinkEligible =?= True && JobUniverse == 5
+JOB_ROUTER_SOURCE_JOB_CONSTRAINT = {routing_eligibility()}
 JOB_ROUTER_ROUTE_NAMES = {', '.join(route_key(name) for name in sites)}
 JOB_ROUTER_POLLING_PERIOD = 10
 # Translation returns the whole job ad. Pegasus ads exceed the 10 KiB default.
 JOB_ROUTER.PIPE_BUFFER_MAX = 16777216
 # Reject shared-filesystem plans before they become remote staging failures.
 SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) ClusterlinkCondorIO
-SUBMIT_REQUIREMENT_ClusterlinkCondorIO = (TARGET.JobUniverse != 5) || (TARGET.ClusterlinkEligible =!= True) || (isUndefined(TARGET.RemoteIwd) && isUndefined(TARGET.REMOTE_Iwd))
-SUBMIT_REQUIREMENT_ClusterlinkCondorIO_REASON = "Clusterlink uses CondorIO sandboxes: remove remote_initialdir/RemoteIwd and replan Pegasus with data.configuration=condorio in a fresh output directory. Shared-filesystem plans are unsupported."
-START = ClusterlinkEligible =!= True
+SUBMIT_REQUIREMENT_ClusterlinkCondorIO = !({routing_eligibility("TARGET.")}) || (isUndefined(TARGET.RemoteIwd) && isUndefined(TARGET.REMOTE_Iwd))
+SUBMIT_REQUIREMENT_ClusterlinkCondorIO_REASON = "Clusterlink uses CondorIO sandboxes: remove remote_initialdir/RemoteIwd and replan Pegasus with data.configuration=condorio in a fresh output directory. Shared-filesystem plans are unsupported for routed jobs."
+START = !({routing_eligibility("TARGET.")})
+# Schedd-local helper count, independent of vanilla execution slots.
+START_LOCAL_UNIVERSE = TotalLocalJobsRunning < {local_helpers}
+# No implicit access to the system pool, and no duplicate full-host startd.
+SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) ClusterlinkLocalExecution
+SUBMIT_REQUIREMENT_ClusterlinkLocalExecution = (TARGET.JobUniverse != 5) || ({routing_eligibility("TARGET.")}) || {"True" if local_slots else "False"}
+SUBMIT_REQUIREMENT_ClusterlinkLocalExecution_REASON = "Unrouted vanilla jobs need explicitly allocated local execution slots: run clusterlink pool configure --local-slots N and reactivate before submitting. Budget these slots across projects and the system pool. Local-universe helpers do not need these slots."
 SUSPEND = False
 PREEMPT = False
 KILL = False

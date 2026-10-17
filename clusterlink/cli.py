@@ -180,6 +180,8 @@ def main():
     p = sub.add_parser("pool")
     p.add_argument("action", choices=["configure", "start", "stop", "queue"])
     p.add_argument("--local-slots", type=int, default=None)
+    p.add_argument("--local-helpers", type=int, default=None,
+                   help="Maximum concurrent local-universe helpers (default: min(8, host CPUs))")
     args = parser.parse_args()
     try:
         from . import project
@@ -250,7 +252,7 @@ def main():
         elif args.command == "pool":
             from . import pool
             if args.action == "configure":
-                print(pool.configure(state, args.local_slots))
+                print(pool.configure(state, args.local_slots, args.local_helpers))
             elif args.action == "start":
                 pool.start(state)
             elif args.action == "stop":

@@ -1,0 +1,28 @@
+{
+  "jobs": [
+    {
+      "site": "condorpool_shared",
+      "id": "1.0",
+      "exit_code": 0,
+      "universe": 5
+    },
+    {
+      "site": "condorpool_symlink",
+      "id": "2.0",
+      "exit_code": 0,
+      "universe": 5
+    },
+    {
+      "site": "local",
+      "id": "3.0",
+      "exit_code": 0,
+      "universe": 12
+    },
+    {
+      "site": "clusterlink",
+      "id": "4.0",
+      "status": "idle: no remote sites; private startd correctly refuses it"
+    }
+  ],
+  "scope": "isolated one-slot private pool; no remote jobs or scientific workflow"
+}

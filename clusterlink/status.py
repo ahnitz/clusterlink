@@ -29,6 +29,7 @@ def collect(state, remote=False):
     prefix = selection.get('prefix')
     supported = selection.get('backend') == 'sif' and not selection.get('artifact')
     active = os.environ.get('CONDA_PREFIX')
+    settings = read(state / 'pool.json')
     result = {
         'state_directory': str(state),
         'project': read(state / 'project.json'),
@@ -42,6 +43,8 @@ def collect(state, remote=False):
         },
         'pool': {
             'configured': (state / 'condor.config').is_file(),
+            'local_slots': settings.get('local_slots', 0),
+            'local_helpers': settings.get('local_helpers'),
             'master_running': master_running(state),
         },
         'sites': [],
@@ -76,6 +79,7 @@ def render(data):
              else 'master running' if pool_state['master_running']
              else 'stopped' if pool_state['configured'] else 'not configured')
     lines += [f'Local pool: {label}', '', f"Linked clusters: {len(data['sites'])}"]
+    lines.insert(-2, f"Local vanilla slots: {pool_state.get('local_slots', 0)}; helper limit: {pool_state.get('local_helpers') or 'regenerate configuration'} (per project)")
     for site in data['sites']:
         enabled = 'enabled' if site['enabled'] else 'disabled for new jobs'
         lines += [f"  {site['name']}: {site['ssh']} ({site['scheduler']}; {enabled})",

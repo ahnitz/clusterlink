@@ -1,5 +1,58 @@
 # Clusterlink acceptance status
 
+## Pegasus workers, job environments, and site policies (0.1.6)
+
+Activation now discovers a full submit-host Pegasus worker archive when the
+selected environment lacks worker executables. It adds a separate image prefix,
+checks native kickstart and Python worker CLIs inside the image, and includes
+archive identity/content in the image cache key. The user's Conda environment is
+unchanged. Missing archives from a discovered host installation fail activation
+with an explanation. Minimal images also receive a PATH-lookup helper used by
+Pegasus; existing environment/system tools take precedence over that helper.
+
+The previous acceptance configuration disabled strict worker-package checking.
+The new regression keeps strict checking enabled, stages the mismatched RHEL9
+archive into Fedora43, and forces any download attempt to fail. Pegasus rejects
+the staged distro tag, then successfully selects the validated bundled 5.1.3
+installation through its existing environment-discovery path. No Pegasus scripts
+are patched or compatibility checks globally disabled. The integration example
+now explicitly enables strict checking; a new full scientific workflow has not
+been rerun for this release.
+
+Hooks preserve explicit job Environment/legacy Env values through the container
+boundary, including native REMOTE_* precedence. Values are quoted as data and
+Apptainer runs with --no-eval. Exported Bash functions are excluded. Unset OpenMP,
+MKL, OpenBLAS, NumExpr and Accelerate limits default to RequestCpus; explicit
+values and Apptainer overrides win. These settings do not enforce an OS quota.
+Native HTCondor already carries environment attributes; this fixes the additional
+container boundary and protects explicit values from downstream quoting loss.
+
+`site policy` accepts native remote Condor Requirements and Rank expressions,
+visible in status. Requirements combine with the source job requirement; the
+site rank replaces source rank for that site. Advanced native submission extras
+retain their override behavior. Policies affect future routing and select workers
+within a site; they do not schedule across sites or cancel running stragglers.
+Slurm rejects these Condor-specific options.
+
+Validation: 74 tests pass and the 0.1.6 wheel builds. Tests include Condor's actual
+submit-file environment encoder, quotes/empty values/literal shell syntax,
+1- and 4-CPU defaults, explicit override precedence, archive integrity and safe
+extraction, and site-policy parsing/preservation. A real local SIF probe passes
+Pegasus strict discovery with downloads forbidden and verifies payload values.
+
+A routed dev1 CondorIO probe (source 35.0, grid 36.0, remote 103646.0)
+returned exit zero and validated output, including a literal dollar expression,
+quotes, an empty value, default one-thread limits and an explicit MKL override.
+The remote ad contained the combined site requirement and rank. Cache leases
+returned to zero and cache usage remained below its 2 GB test budget; the empty
+test manager was stopped. An initial failed remote attempt exposed a runtime
+reuse symlink in the test archive; packaging now archives the resolved runtime
+contents. [Probe evidence](integration/probes/worker-environment-016.json).
+No running user workflow or its installed package was modified.
+
+Relevant native contracts: [Pegasus worker discovery](https://pegasus.isi.edu/documentation/user-guide/data-transfers.html#staging-of-worker-package)
+and [HTCondor job environment syntax](https://htcondor.readthedocs.io/en/25.0/man-pages/condor_submit.html).
+
 ## Preparation batching and native process tracking (0.1.5)
 
 Concurrent preparation hooks for the same site/image now coalesce cache checks

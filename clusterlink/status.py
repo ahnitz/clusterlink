@@ -47,7 +47,7 @@ def collect(state, remote=False):
         'sites': [],
     }
     for name, site in sorted(read(state / 'sites.json').items()):
-        entry = {key: site.get(key) for key in ('ssh', 'scheduler', 'root', 'max_jobs', 'max_idle')}
+        entry = {key: site.get(key) for key in ('ssh', 'scheduler', 'root', 'max_jobs', 'max_idle', 'requirements', 'rank')}
         entry.update(name=name, enabled=site.get('enabled', True), limits=site.get('limits', {}))
         if remote:
             from .cli import flush_releases, remote_call
@@ -81,6 +81,9 @@ def render(data):
         lines += [f"  {site['name']}: {site['ssh']} ({site['scheduler']}; {enabled})",
                   f"    Remote directory: {site['root']}",
                   f"    Queue limits: {'unlimited' if site['max_jobs'] == -1 else site['max_jobs']} total, {'unlimited' if site['max_idle'] == -1 else site['max_idle']} idle"]
+        for field in ('requirements', 'rank'):
+            if site.get(field) is not None:
+                lines.append(f"    Remote {field}: {site[field]}")
         limits = site['limits']
         def gb(key):
             return f"{limits[key] / 1e9:g} GB" if key in limits else 'not set'

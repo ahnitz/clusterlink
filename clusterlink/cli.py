@@ -96,6 +96,9 @@ def enroll(args, state):
         raise ValueError("Remote project path must be absolute and contain no whitespace/metacharacters")
     site.update(scheduler=scheduler, limits=limits, probe=p, max_idle=idle, max_jobs=maximum,
                 enabled=previous.get("enabled", True))
+    for field in ('requirements', 'rank'):
+        if field in previous:
+            site[field] = previous[field]
     portable = args.helpers == 'portable' or bool(sites.get(args.name, {}).get('helpers')) or not all(p['commands'][n] for n in ['blahpd', 'condor_ft-gahp'])
     if portable:
         from .helpers import helper_bundle
@@ -154,8 +157,10 @@ def main():
     p.add_argument("--max-idle", type=queue_limit, help="Idle-job limit or unlimited (default: 20; preserves existing limit with --update)")
     p.add_argument("--max-jobs", type=queue_limit, help="Total routed-job limit or unlimited (default: unlimited; preserves existing limit with --update)")
     p = sub.add_parser("site", help="Control routing without reinstalling remote helpers")
-    p.add_argument("action", choices=["enable", "disable", "limits"])
+    p.add_argument("action", choices=["enable", "disable", "limits", "policy"])
     p.add_argument("name")
+    p.add_argument('--requirements', help='Additional native remote Condor Requirements (use True to clear)')
+    p.add_argument('--rank', help='Native remote Condor Rank expression (use 0 to clear)')
     p.add_argument('--max-jobs', type=queue_limit)
     p.add_argument('--max-idle', type=queue_limit)
     p = sub.add_parser("status", help="Show selected environment, pool state, and linked clusters")
@@ -194,7 +199,25 @@ def main():
             sites = json.loads((state / "sites.json").read_text())
             if args.name not in sites:
                 raise ValueError("Unknown enrolled site: " + args.name)
-            if args.action == 'limits':
+            if args.action != 'policy' and (args.requirements is not None or args.rank is not None):
+                raise ValueError('Use site policy to change Requirements or Rank')
+            if args.action == 'policy':
+                if args.max_jobs is not None or args.max_idle is not None:
+                    raise ValueError('Use site limits to change queue limits')
+                if sites[args.name]['scheduler'] != 'condor':
+                    raise ValueError('Requirements and Rank policies require a remote Condor scheduler')
+                import classad2
+                for field in ('requirements', 'rank'):
+                    value = getattr(args, field)
+                    if value is not None:
+                        if '\n' in value or '\r' in value or not value.strip():
+                            raise ValueError('Policy must be a nonempty single-line ClassAd expression')
+                        try:
+                            expression = classad2.ExprTree(value)
+                        except Exception as error:
+                            raise ValueError('Invalid ' + field + ' expression') from error
+                        sites[args.name][field] = str(expression).replace('\n', ' ').replace('\r', ' ')
+            elif args.action == 'limits':
                 site = sites[args.name]
                 maximum = args.max_jobs if args.max_jobs is not None else site['max_jobs']
                 idle = args.max_idle if args.max_idle is not None else site['max_idle']
@@ -209,7 +232,9 @@ def main():
             pool.configure(state)
             if pool.running(state):
                 subprocess.run(["condor_reconfig"], env=pool.environment(state), check=True)
-            if args.action == 'limits':
+            if args.action == 'policy':
+                print(args.name + ': remote Condor policy updated for future routing; existing jobs unchanged')
+            elif args.action == 'limits':
                 print(f'{args.name}: max-jobs={"unlimited" if maximum == -1 else maximum}, max-idle={"unlimited" if idle == -1 else idle}; existing jobs remain tracked')
             else:
                 print(args.name + (" enabled for new jobs" if args.action == "enable" else " disabled for new jobs; existing jobs remain tracked"))

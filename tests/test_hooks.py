@@ -33,14 +33,19 @@ class HookTests(unittest.TestCase):
                  'ClusterlinkArtifact': classad2.Value.Undefined,
                  'BatchExtraSubmitArgs': '+UserChosenAttribute = "preserved"',
                  'Arguments': "'a b' 'quoted'", 'RequestCpus': 4,
+                 'Environment': "OMP_NUM_THREADS=3 TEST='hello world'",
+                 'Requirements': classad2.ExprTree('TARGET.Memory >= 512'),
                  'TransferInput': 'data.txt', 'TransferOutput': 'nested/result.txt',
                  'TransferOutputRemaps': 'result.txt=nested/result.txt'})
             with patch('clusterlink.hooks.prepared_image', return_value=(artifact, hashlib.sha256(b'test archive').hexdigest(), 2048)) as bundle, patch(
                     'clusterlink.hooks.remote_call', return_value={'cached': True}) as remote:
-                out = prepare(ad, {'scheduler': 'condor'}, root)
+                out = prepare(ad, {'scheduler': 'condor', 'requirements': 'TARGET.HasUserNamespaces', 'rank': 'TARGET.KFlops'}, root)
             bundle.assert_called_once_with(root, {'prefix':str(env),'backend':'sif'})
             self.assertEqual(out['Arguments'], "'a b' 'quoted'")
             self.assertEqual(out['NodeNumber'], 4)
+            self.assertIn('(TARGET.Memory >= 512) && (TARGET.HasUserNamespaces)', out['ClusterlinkRemoteSubmitArgs'])
+            self.assertIn('rank = TARGET.KFlops', out['ClusterlinkRemoteSubmitArgs'])
+            self.assertIn('APPTAINERENV_TEST=hello world', Path(out['Cmd']).read_text())
             self.assertIn('+UserChosenAttribute = "preserved"\n', out['ClusterlinkRemoteSubmitArgs'])
             self.assertGreaterEqual(out['RequestDisk'], 65538)
             self.assertEqual(out['TransferInput'], 'data.txt')

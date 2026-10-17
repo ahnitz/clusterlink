@@ -12,6 +12,7 @@ import classad2
 from .cli import remote_call
 from .environments import prepared_image, executable_command, launcher
 from . import leases
+from .job_environment import values as job_environment
 
 
 def remote_output_settings(outputs):
@@ -85,6 +86,10 @@ def prepare(ad, site, state):
     selected = ad.get('ClusterlinkArtifact')
     if selected is not None and selected != classad2.Value.Undefined:
         raise ValueError('Archive overrides are unsupported; use the project environment')
+    environment = job_environment(ad)
+    cpus = int(ad.get('RequestCpus', 1))
+    if cpus < 1:
+        raise ValueError('RequestCpus must be positive')
     ident = hashlib.sha256(str(ad.get('GlobalJobId', '')).encode()).hexdigest()
     work = state / 'prepared' / ident
     work.mkdir(parents=True, exist_ok=True)
@@ -121,7 +126,8 @@ def prepare(ad, site, state):
         files.append(str(artifact))
     wrapper = work / 'launch.sh'
     wrapper.write_text(launcher(command, archive, prefix, external.name if external else None,
-                                ad.get('TransferOutput', '').split(',')))
+                                ad.get('TransferOutput', '').split(','),
+                                cpus=cpus, environment=environment))
     wrapper.chmod(0o700)
     ad['Cmd'] = str(wrapper)
     ad['TransferExecutable'] = True
@@ -137,8 +143,15 @@ def prepare(ad, site, state):
         if output_settings:
             extra += output_settings
             ad['TransferOutput'] = ','.join(Path(p).name for p in outputs.split(',') if p)
-        if 'Requirements' in ad:
-            extra += 'requirements = ' + str(ad.lookup('Requirements')) + '\n'
+        requirement = str(ad.lookup('Requirements')) if 'Requirements' in ad else 'True'
+        if site.get('requirements'):
+            requirement = '(' + requirement + ') && (' + site['requirements'] + ')'
+        extra += 'requirements = ' + requirement + '\n'
+        rank = site.get('rank')
+        if rank is None and 'Rank' in ad:
+            rank = str(ad.lookup('Rank'))
+        if rank is not None:
+            extra += 'rank = ' + rank + '\n'
         native_extra = ad.get('BatchExtraSubmitArgs')
         if isinstance(native_extra, str) and native_extra.strip():
             extra += native_extra.rstrip() + '\n'

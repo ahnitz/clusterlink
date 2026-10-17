@@ -116,7 +116,7 @@ def executable_command(value, prefix=None):
     return './' + shlex.quote(path.name), path
 
 
-def launcher(command, archive='environment.tar.gz', source_prefix=None, staged_script=None, outputs=()):
+def launcher(command, archive='environment.tar.gz', source_prefix=None, staged_script=None, outputs=(), *, cpus=1, environment=None):
     # A failed application may never create its declared outputs. Return its
     # stderr and nonzero exit instead of losing diagnostics to a transfer hold.
     safe_outputs = [str(p) for value in outputs if value
@@ -144,24 +144,48 @@ def launcher(command, archive='environment.tar.gz', source_prefix=None, staged_s
                     'p.write_bytes(data.replace(old,new)) if b"\\x00" not in data and old in data else None')
             remap += ('"$CLUSTERLINK_ENV/bin/python" -c ' + shlex.quote(code) + ' '
                       + shlex.quote(staged_script) + ' "$source_prefix" "$CLUSTERLINK_ENV/"\n')
+    cpus = int(cpus)
+    if cpus < 1:
+        raise ValueError('RequestCpus must be positive')
+    # Carry the source job's explicit environment through --cleanenv. Values
+    # are shell-quoted as data, never interpreted as shell expressions.
+    job_env = environment or {}
+    exports = ''
+    for name, value in job_env.items():
+        if name.startswith(('APPTAINERENV_', 'SINGULARITYENV_')):
+            continue
+        target = 'APPTAINERENV_' + name
+        exports += 'export ' + shlex.quote(target + '=' + value) + '\n'
+    for namespace in ('SINGULARITYENV_', 'APPTAINERENV_'):
+        for name, value in job_env.items():
+            if name.startswith(namespace):
+                target = 'APPTAINERENV_' + name[len(namespace):]
+                exports += 'export ' + shlex.quote(target + '=' + value) + '\n'
+    defaults = ('  for name in OMP_NUM_THREADS MKL_NUM_THREADS OPENBLAS_NUM_THREADS '
+                'NUMEXPR_NUM_THREADS VECLIB_MAXIMUM_THREADS; do\n'
+                '    target="APPTAINERENV_$name"\n'
+                f'    if [[ ! -v "$target" ]]; then export "$target={cpus}"; fi\n'
+                '  done\n')
     timing = 'printf \'CLUSTERLINK_TIMING phase=%s epoch=%s\\n\' \"$1\" \"$(date +%s.%N)\" >&2'
     container = ('[ -f .clusterlink-env/environment.sif ] || { echo "Clusterlink SIF missing" >&2; exit 1; }\n'
         '  mkdir -p .clusterlink-env/tmp .clusterlink-env/cache .clusterlink-env/config\n'
         '  export APPTAINER_TMPDIR="$PWD/.clusterlink-env/tmp"\n'
         '  export APPTAINER_CACHEDIR="$PWD/.clusterlink-env/cache"\n'
         '  export APPTAINER_CONFIGDIR="$PWD/.clusterlink-env/config"\n'
+        + exports
         # Keep native allocation limits across --cleanenv. Explicit Apptainer
-        # overrides retain their normal precedence; absent values stay absent.
-        '  for name in CUBACORES GOMAXPROCS JULIA_NUM_THREADS MKL_NUM_THREADS NUMEXPR_NUM_THREADS '
+        # overrides retain their normal precedence; defaults below fill thread limits.
+        + '  for name in CUBACORES GOMAXPROCS JULIA_NUM_THREADS MKL_NUM_THREADS NUMEXPR_NUM_THREADS '
         'OMP_NUM_THREADS OMP_THREAD_LIMIT OPENBLAS_NUM_THREADS PYTHON_CPU_COUNT ROOT_MAX_THREADS '
-        'TF_LOOP_PARALLEL_ITERATIONS TF_NUM_THREADS CUDA_VISIBLE_DEVICES NVIDIA_VISIBLE_DEVICES; do\n'
+        'VECLIB_MAXIMUM_THREADS TF_LOOP_PARALLEL_ITERATIONS TF_NUM_THREADS CUDA_VISIBLE_DEVICES NVIDIA_VISIBLE_DEVICES; do\n'
         '    target="APPTAINERENV_$name"\n'
         '    if [[ -v "$name" && ! -v "$target" ]]; then export "$target=${!name}"; fi\n'
         '  done\n'
+        + defaults
         # This is our freshly extracted, user-owned runtime, never the host's
         # configuration. The nested unsquashfs helper does not inherit CLI
         # --no-mount flags, so configure devpts here for both helper and payload.
-        '  for config in .clusterlink-env/apptainer-runtime/*/etc/apptainer/apptainer.conf; do\n'
+        + '  for config in .clusterlink-env/apptainer-runtime/*/etc/apptainer/apptainer.conf; do\n'
         '    [ -f "$config" ] || { echo "Private Apptainer configuration missing" >&2; exit 1; }\n'
         '    sed -i -E "s/^[[:space:]]*mount devpts[[:space:]]*=.*/mount devpts = no/" "$config"\n'
         '  done\n'
@@ -174,11 +198,12 @@ def launcher(command, archive='environment.tar.gz', source_prefix=None, staged_s
         'export CLUSTERLINK_ENV=/opt/clusterlink/env\n'
         'export CONDA_PREFIX="$CLUSTERLINK_ENV"\n'
         'export PEGASUS_PYTHON="$CLUSTERLINK_ENV/bin/python"\n'
-        'export PATH="$CLUSTERLINK_ENV/bin:$PATH"\n'
+        'export PATH="$CLUSTERLINK_ENV/bin:$PATH:/opt/clusterlink/bin"\n'
+        '[ ! -d /opt/clusterlink/pegasus/bin ] || export PATH="/opt/clusterlink/pegasus/bin:$PATH"\n'
         'unset PYTHONHOME PYTHONPATH\nexport PYTHONNOUSERSITE=1\n'
         + remap + command + ' "$@"\nCLUSTERLINK_INNER\n'
         '  run_container() {\n'
-        '    ./.clusterlink-env/apptainer-runtime/bin/apptainer exec "$@" --userns --cleanenv --containall '
+        '    ./.clusterlink-env/apptainer-runtime/bin/apptainer exec "$@" --userns --cleanenv --no-eval --containall '
         '--bind "$PWD:/work" --pwd /work .clusterlink-env/environment.sif /bin/bash /work/.clusterlink-env/run.sh "${payload_args[@]}"\n'
         '  }\n'
         '  payload_args=("$@")\n'

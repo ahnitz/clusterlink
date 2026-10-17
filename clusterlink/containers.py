@@ -64,8 +64,10 @@ def build(prefix, state, base=None, *, allow_build=True):
     if state == prefix or prefix in state.parents:
         raise ValueError('Project state must be outside the environment')
     base = base or default_base()
+    from . import pegasus
+    worker = pegasus.discover(prefix)
     signature = fingerprint(prefix)
-    key = hashlib.sha256(json.dumps([str(prefix), signature, base, VERSION, 'sif-v1']).encode()).hexdigest()
+    key = hashlib.sha256(json.dumps([str(prefix), signature, base, VERSION, 'sif-v3', worker]).encode()).hexdigest()
     artifacts = state/'artifacts'; artifacts.mkdir(exist_ok=True)
     manifest = artifacts/(key+'.manifest.json')
     if manifest.exists():
@@ -78,7 +80,7 @@ def build(prefix, state, base=None, *, allow_build=True):
             return cached
     if not allow_build:
         raise ValueError('Project SIF is missing, stale, or damaged; leave the project shell and run clusterlink activate before submitting jobs')
-    private_runtime = runtime(state)
+    private_runtime = runtime(state).resolve()
     env = {**os.environ}
     for keyname, directory in [('APPTAINER_CACHEDIR','container-cache'),('APPTAINER_TMPDIR','container-tmp'),('APPTAINER_CONFIGDIR','container-config')]:
         path = state/directory;path.mkdir(exist_ok=True);env[keyname] = str(path)
@@ -96,12 +98,14 @@ def build(prefix, state, base=None, *, allow_build=True):
         subprocess.run([apptainer,'build','--fix-perms','--sandbox',str(rootfs),base],env=env,check=True, stdout=sys.stderr)
         target=rootfs/PREFIX.lstrip('/');target.mkdir(parents=True)
         subprocess.run(['tar','-xzf',str(archive),'-C',str(target)],check=True, stdout=sys.stderr)
+        pegasus.install(worker, rootfs)
+        pegasus.validate(worker, apptainer, rootfs, env)
         # Smoke-check the actual image userspace before producing an artifact.
         subprocess.run([apptainer,'exec','--userns','--cleanenv',str(rootfs),PREFIX+'/bin/python','-c','import sys; print(sys.version)'],env=env,check=True, stdout=sys.stderr)
         image=work/'environment.sif'
         subprocess.run([apptainer,'build','--mksquashfs-args','-processors 2',str(image),str(rootfs)],env=env,check=True, stdout=sys.stderr)
         unpacked=sum(p.stat().st_size for p in rootfs.rglob('*') if p.is_file() and not p.is_symlink())
-        metadata={'backend':'sif','base':base,'runtime_version':VERSION,'environment_prefix':PREFIX,'rootfs_bytes':unpacked,'source':str(prefix),'fingerprint':signature,'sif_sha256':checksum(image)}
+        metadata={'pegasus_worker':worker,'backend':'sif','base':base,'runtime_version':VERSION,'environment_prefix':PREFIX,'rootfs_bytes':unpacked,'source':str(prefix),'fingerprint':signature,'sif_sha256':checksum(image)}
         marker=work/'clusterlink-container.json';marker.write_text(json.dumps(metadata))
         output=work/'container.tar'
         with tarfile.open(output,'w') as tar:

@@ -47,3 +47,22 @@ class SiteTests(unittest.TestCase):
                     main()
                 args = enroll.call_args.args[0]
                 self.assertEqual((args.max_jobs, args.max_idle), expected)
+
+    def test_native_policy_validation_and_preservation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/'pool.json').write_text(json.dumps({'port':43779}))
+            path=root/'sites.json'
+            site={'scheduler':'condor','root':'/home/user/cache','max_jobs':10,'max_idle':2}
+            path.write_text(json.dumps({'test':site}))
+            argv=['clusterlink','--state',tmp,'site','policy','test','--requirements','TARGET.Memory >= 1024','--rank','TARGET.KFlops']
+            with patch('sys.argv',argv), patch('clusterlink.pool.running',return_value=False):
+                main()
+            updated=json.loads(path.read_text())['test']
+            self.assertIn('TARGET.Memory',updated['requirements'])
+            self.assertEqual(updated['rank'],'TARGET.KFlops')
+            self.assertEqual(updated['max_idle'],2)
+            before=path.read_text()
+            with patch('sys.argv',argv[:-1]+['(invalid']), self.assertRaises(SystemExit):
+                main()
+            self.assertEqual(path.read_text(),before)

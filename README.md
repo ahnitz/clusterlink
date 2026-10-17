@@ -84,6 +84,21 @@ download Apptainer, or build SIFs. Source-environment edits take effect at the
 next activation, not during job routing.
 Apptainer installer output is saved in `.clusterlink/install-apptainer.log`.
 
+Activation also discovers submit-host Pegasus worker tools when the environment
+lacks them. A versioned worker archive is bundled separately inside the SIF and
+its native/Python tools are checked in the image. The Conda environment is not
+modified. Changed worker archives invalidate the image cache. PegasusLite can
+use these installed tools when its strict check rejects a staged archive's distro
+tag; strict checks remain enabled. The planner and bundled worker version must
+match. A discovered Pegasus install without a worker archive produces an activation
+error instead of relying on per-job downloads.
+
+Explicit job environment values survive the container boundary, including values
+captured by `getenv` at submission. Container Python/prefix setup still selects
+the project environment. Unset OpenMP, MKL, OpenBLAS, NumExpr, and Accelerate thread
+limits default to `request_cpus`; explicit values, including Apptainer overrides,
+win. These variables guide libraries; they are not an OS-enforced CPU quota.
+
 Workers normally mount the SIF directly. If container setup fails before the
 payload starts, Clusterlink retries setup using extraction; it never retries a
 started payload itself. New delivery bundles omit outer gzip compression, and
@@ -120,6 +135,21 @@ clusterlink site disable su        # Stop new routing there; preserve existing j
 clusterlink site enable su
 condor_rm JOB_ID                   # Cancel a job inside the activated project shell
 ```
+
+Optional per-site worker selection uses native remote Condor expressions:
+
+```bash
+clusterlink site policy su --requirements 'TARGET.HasUserNamespaces =?= True'
+clusterlink site policy su --rank 'TARGET.KFlops'
+```
+
+The site requirement is combined with the job's requirement. A site rank replaces
+the job rank for that site; it ranks workers within the remote pool, not clusters.
+Use `--requirements True` or `--rank 0` to reset. Changes affect future routing,
+not jobs already submitted remotely. Advanced `BatchExtraSubmitArgs` remain native
+submit overrides and can override these settings. Slurm does not accept these
+Condor policies. Clusterlink does not automatically cancel or duplicate stragglers;
+retry and runtime policies remain with HTCondor/Pegasus.
 
 Status works offline by default. `--remote` also delivers pending cache-lease
 releases. `--json` provides structured output. A running master is not a complete

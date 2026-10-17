@@ -1,0 +1,56 @@
+{
+  "version": "0.1.6",
+  "tests": 74,
+  "full_scientific_workflow_rerun": false,
+  "source_job": "35.0",
+  "grid_job": "36.0",
+  "remote_job": "103646.0",
+  "site": "dev1",
+  "artifact_sha256": "ac0d45031c2957f10af95e50e86cbe08f9cc2b168f7512130e6a388e0f49f938",
+  "artifact_bytes": 895027200,
+  "strict_worker_check": true,
+  "download_attempts": 0,
+  "worker_version": "5.1.3",
+  "worker_package": "x86_64_rhel_9",
+  "image_base": "docker://fedora:43",
+  "exit_code": 0,
+  "payload_environment": {
+    "OMP_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "3",
+    "OPENBLAS_NUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "CLUSTERLINK_TEST": "space 'quote' $literal",
+    "CLUSTERLINK_EMPTY": ""
+  },
+  "timing_lines": [
+    "CLUSTERLINK_TIMING phase=bundle_start epoch=1792248508.399198859",
+    "CLUSTERLINK_TIMING phase=bundle_ready epoch=1792248509.729554173",
+    "CLUSTERLINK_TIMING phase=container_start epoch=1792248509.734362099",
+    "CLUSTERLINK_TIMING phase=payload_start epoch=1792248509.848492660",
+    "CLUSTERLINK_TIMING phase=payload_end epoch=1792248510.050553341",
+    "CLUSTERLINK_TIMING phase=container_end epoch=1792248510.058596865"
+  ],
+  "native_policy": {
+    "additional_requirements": "TARGET.Cpus >= 1",
+    "rank": "TARGET.Cpus",
+    "observed_in_remote_ad": true
+  },
+  "cache": {
+    "cache_used_bytes": 1626255360,
+    "total_bytes": 1626470912,
+    "active_leases": 0,
+    "cache_bytes": 2000000000,
+    "storage_bytes": 5000000000,
+    "reserve_bytes": 1000000000
+  },
+  "manager_stop_requested": true,
+  "development_failures": [
+    "Initial local probe exposed missing which in minimal base; image helper added and validated.",
+    "Initial remote attempt 33.0/34.0 (remote 103645) failed before payload because test runtime reuse symlink was archived. Builder now archives resolved runtime contents; corrected retry passed."
+  ],
+  "limits": [
+    "One bounded remote probe, not a new 950-job workflow or Slurm test.",
+    "No automatic straggler cancellation/requeue policy added; other projects were not restarted or modified."
+  ]
+}

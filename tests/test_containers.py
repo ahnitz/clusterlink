@@ -79,10 +79,10 @@ class PreparedImageTests(unittest.TestCase):
             prefix = state / 'env'
             prefix.mkdir()
             base = 'docker://fedora:43'
-            with patch('clusterlink.environments.fingerprint', return_value='signature'), patch('clusterlink.containers.runtime') as runtime:
+            with patch('clusterlink.environments.fingerprint', return_value='signature'), patch('clusterlink.containers.runtime') as runtime, patch('clusterlink.pegasus.discover', return_value=None):
                 with self.assertRaisesRegex(ValueError, 'clusterlink activate'):
                     build(prefix, state, base, allow_build=False)
-                key = hashlib.sha256(json.dumps([str(prefix), 'signature', base, VERSION, 'sif-v1']).encode()).hexdigest()
+                key = hashlib.sha256(json.dumps([str(prefix), 'signature', base, VERSION, 'sif-v3', None]).encode()).hexdigest()
                 digest = hashlib.sha256(b'prepared image').hexdigest()
                 artifact = state / 'artifacts' / (digest + '.tar.gz')
                 artifact.write_bytes(b'prepared image')

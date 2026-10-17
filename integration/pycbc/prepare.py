@@ -92,6 +92,6 @@ old='\n'.join(line for line in old.splitlines() if not line.startswith(('pegasus
 # A held remote job must terminate before DAGMan can apply its retry policy.
 old=old.replace('condor.periodic_remove=(JobStatus == 5) && ((CurrentTime - EnteredCurrentStatus) > 43200)',
     'condor.periodic_remove=(JobStatus == 5) && ((CurrentTime - EnteredCurrentStatus) > 120)')
-extra='\n# Clusterlink isolated acceptance test\npegasus.transfer.worker.package=true\npegasus.transfer.worker.package.strict=false\npegasus.catalog.master.url=sqlite:///'+str(work/'master.db')+'\n'
+extra='\n# Clusterlink isolated acceptance test\npegasus.transfer.worker.package=true\npegasus.transfer.worker.package.strict=true\npegasus.catalog.master.url=sqlite:///'+str(work/'master.db')+'\n'
 props.write_text(old+extra)
 (evidence/'properties.txt').write_text(extra)

@@ -136,6 +136,20 @@ clusterlink site enable su
 condor_rm JOB_ID                   # Cancel a job inside the activated project shell
 ```
 
+For per-job settings in Condor submit files or PyCBC configurations, use native
+ClassAd names with `REMOTE_` and the enrolled site suffix:
+
+```ini
+condor|+REMOTE_Requirements_su = TARGET.RecentDaemonCoreDutyCycle < 0.05
+condor|+REMOTE_Environment_su = "OMP_NUM_THREADS=1 MKL_NUM_THREADS=1"
+```
+
+The selected site value overrides the unsuffixed remote value. These settings
+leave local matching and other sites unchanged. Environment replacement follows
+native HTCondor semantics; it is not a variable-by-variable merge. See the
+[PyCBC/agent handoff](integration/pycbc/remote-settings.md) for precedence,
+resources, raw submit directives, backend limits, and upgrade instructions.
+
 Optional per-site worker selection uses native remote Condor expressions:
 
 ```bash

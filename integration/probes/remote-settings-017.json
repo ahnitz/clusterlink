@@ -1,0 +1,32 @@
+{
+  "version": "0.1.7",
+  "tests": 79,
+  "source_job": "41.0",
+  "grid_job": "42.0",
+  "remote_job": "103649.0",
+  "site": "dev1",
+  "exit_code": 0,
+  "source_ad": "Environment = \"SITE=source\"\nREMOTE_Environment = \"SITE=global\"\nREMOTE_Requirements = false\nRequestCpus = 1\nRequirements = (TARGET.Arch == \"X86_64\") && (TARGET.OpSys == \"LINUX\") && (versionGE(split(TARGET.CondorVersion)[1],\"25.12.0\") || (TARGET.Disk >= RequestDisk)) && (TARGET.Memory >= RequestMemory) && (TARGET.HasFileTransfer)\n\n",
+  "remote_ad": "ClusterId = 103649\nExitCode = 0\nJobStatus = 4\nProbeMarker = \"selected site\"\nRank = TARGET.Cpus\nRequestCpus = 2\nRequirements = ((TARGET.Cpus >= 2) && (TARGET.Cpus >= 1)) && (TARGET.Arch == \"X86_64\") && (TARGET.OpSys == \"LINUX\") && (TARGET.Disk >= RequestDisk) && (TARGET.Memory >= RequestMemory) && (TARGET.HasFileTransfer)\nSiteMarker = 2\n\n",
+  "payload": {
+    "SITE": "dev1",
+    "NOTE": "spaces 'quote' $literal",
+    "EMPTY": "",
+    "OMP_NUM_THREADS": "2",
+    "MKL_NUM_THREADS": "3",
+    "OPENBLAS_NUM_THREADS": "2"
+  },
+  "cache": {
+    "cache_used_bytes": 1626255360,
+    "total_bytes": 1626493572,
+    "active_leases": 0,
+    "cache_bytes": 2000000000,
+    "storage_bytes": 5000000000,
+    "reserve_bytes": 1000000000
+  },
+  "development_failures": [
+    "Probe 37.0 (grid 38.0) and 39.0 (grid 40.0) held because native custom attributes preserved literal backslash-n in raw submit lines. Added explicit line-separator normalization and regression coverage, removed only those test jobs, then retry succeeded."
+  ],
+  "scope": "One native dev1 probe; other-route isolation tested with paired hook preparations; no new full PyCBC campaign or Slurm run.",
+  "manager_stop_requested": true
+}

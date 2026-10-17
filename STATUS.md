@@ -1,5 +1,48 @@
 # Clusterlink acceptance status
 
+## Native remote attributes by site (0.1.7)
+
+Job attributes named `REMOTE_<ClassAdAttribute>_<enrolled-site>` now select a
+native remote attribute for that route. The selected suffix is stripped and the
+site value replaces an unsuffixed remote value. Other enrolled-site variants are
+removed from the routed copy; the source job is unchanged. Longest enrolled
+suffixes win, case-insensitively. The private generated routes protect their
+cache-transfer settings from an unprocessed REMOTE_BatchExtraSubmitArgs override.
+
+The batch Condor adapter does not forward arbitrary native attributes itself,
+so selected attributes are also emitted into its real submit file. Remote
+Requirements replace base job requirements and combine with enrolled-site policy;
+remote Rank takes precedence over site/job defaults. Environment uses native
+whole-environment replacement, reaches the container, and supports expressions
+that evaluate to strings at preparation. Numeric remote resource requests update
+both native requests and launcher CPU defaults; working disk receives the usual
+image/input overhead. Transport/wrapper fields remain managed and reject remote
+overrides. Slurm uses the same suffix selection with its native backend's limited
+attribute mappings; no Slurm execution claim is made.
+
+Prepared launcher paths now include destination identity, preventing another
+route's settings from overwriting a job's launcher. Raw extra-submit text accepts
+literal backslash-n line separators, since native submit custom strings preserve
+that spelling. Site-specific raw text replaces global text; it is not appended.
+
+Validation: 79 tests pass and the 0.1.7 wheel builds. Coverage includes paired
+route preparations, unchanged source ads, typed expressions, legacy/new
+native environment replacement, CPU/disk overrides, generic remote attributes,
+raw directives, hook serialization, and real condor_submit parsing. See the
+[PyCBC/agent handoff](integration/pycbc/remote-settings.md) for upgrade and usage.
+
+A native dev1 probe (source 41.0, grid 42.0, remote 103649.0) completed with
+exit zero. Its source retained a one-CPU request and unchanged local requirements;
+the remote job had the selected two-CPU request, requirement, rank, custom marker,
+and raw submit directive. The payload verified site-selected environment values,
+literal quoting, an empty value, and two-thread defaults. The global remote
+requirement was deliberately False and was correctly replaced only for dev1.
+Cache leases drained to zero, usage stayed below budget, and the empty test
+manager was stopped. Two preliminary probe submissions exposed literal newline
+handling in custom attributes; they were removed and the corrected retry passed.
+[Evidence](integration/probes/remote-settings-017.json). Other-route isolation is
+covered by paired hook tests; this is not a full PyCBC campaign or Slurm test.
+
 ## Pegasus workers, job environments, and site policies (0.1.6)
 
 Activation now discovers a full submit-host Pegasus worker archive when the

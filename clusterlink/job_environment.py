@@ -6,7 +6,13 @@ def values(ad):
     # GridManager gives REMOTE_* environment attributes precedence as a group.
     remote = any(name in ad for name in ('REMOTE_Environment', 'REMOTE_Env', 'REMOTE_EnvDelim'))
     prefix = 'REMOTE_' if remote else ''
-    encoded = ad.get(prefix + 'Environment')
+    def read(name, default=None):
+        if name not in ad:
+            return default
+        return ad.eval(name) if hasattr(ad, 'eval') else ad[name]
+    encoded = read(prefix + 'Environment')
+    if prefix + 'Environment' in ad and not isinstance(encoded, str):
+        raise ValueError('Job Environment must evaluate to a string before routing')
     entries = []
     if isinstance(encoded, str):
         token, quoted, i = '', False, 0
@@ -30,8 +36,8 @@ def values(ad):
         if token:
             entries.append(token)
     else:
-        encoded = ad.get(prefix + 'Env', '')
-        delimiter = ad.get(prefix + 'EnvDelim', ';')
+        encoded = read(prefix + 'Env', '')
+        delimiter = read(prefix + 'EnvDelim', ';')
         if isinstance(encoded, str) and encoded:
             if not isinstance(delimiter, str) or len(delimiter) != 1:
                 raise ValueError('Invalid job EnvDelim')

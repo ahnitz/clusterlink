@@ -11,7 +11,7 @@ import classad2
 
 from .cli import remote_call
 from .environments import prepared_image, executable_command, launcher
-from . import leases
+from . import leases, remote_settings
 from .job_environment import values as job_environment
 
 
@@ -69,7 +69,19 @@ def prepare_cache(site, state, artifact, digest, ident):
         ready.unlink()
 
 
-def prepare(ad, site, state):
+def prepare(ad, site, state, site_name=None):
+    enrolled = json.loads((state / 'sites.json').read_text()) if (state / 'sites.json').exists() else {}
+    ad = remote_settings.select(ad, site_name, [*enrolled, *([site_name] if site_name else [])])
+    # Resolve resource overrides before calculating image disk and thread limits.
+    for field in ('RequestCpus', 'RequestMemory', 'RequestDisk', 'RequestGPUs'):
+        key = 'REMOTE_' + field
+        if key in ad:
+            value = ad.eval(key)
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
+                raise ValueError(key + ' must be a nonnegative numeric resource request')
+            ad[field] = value
+            del ad[key]
+
     # VanillaToGrid removes these for unsandboxed Job Router copies. Our grid
     # copy transfers directly into the source Iwd, so restore them in the route.
     if isinstance(ad.get('TransferOutputRemaps'), str):
@@ -86,11 +98,27 @@ def prepare(ad, site, state):
     selected = ad.get('ClusterlinkArtifact')
     if selected is not None and selected != classad2.Value.Undefined:
         raise ValueError('Archive overrides are unsupported; use the project environment')
+    for field in ('Requirements', 'Rank'):
+        key = 'REMOTE_' + field
+        if key in ad and isinstance(ad.get(key), str):
+            raise ValueError(key + ' must be a ClassAd expression, not a quoted string')
+    extra_key = 'REMOTE_BatchExtraSubmitArgs' if 'REMOTE_BatchExtraSubmitArgs' in ad else 'BatchExtraSubmitArgs'
+    native_extra = ad.eval(extra_key) if extra_key in ad else None
+    if native_extra not in (None, classad2.Value.Undefined) and not isinstance(native_extra, str):
+        raise ValueError('BatchExtraSubmitArgs must be a string')
+    if isinstance(native_extra, str):
+        # condor_submit keeps literal backslash-n in custom string attributes.
+        # This submit-text field accepts that spelling as a line separator.
+        native_extra = native_extra.replace('\\n', '\n')
+        ad[extra_key] = native_extra
     environment = job_environment(ad)
+    for field in ('REMOTE_Environment', 'REMOTE_Env', 'REMOTE_EnvDelim'):
+        if field in ad:
+            ad[field] = ad.eval(field)
     cpus = int(ad.get('RequestCpus', 1))
     if cpus < 1:
         raise ValueError('RequestCpus must be positive')
-    ident = hashlib.sha256(str(ad.get('GlobalJobId', '')).encode()).hexdigest()
+    ident = hashlib.sha256((str(ad.get('GlobalJobId', '')) + ('\0' + site_name if site_name else '')).encode()).hexdigest()
     work = state / 'prepared' / ident
     work.mkdir(parents=True, exist_ok=True)
     artifact, digest, environment_disk = prepared_image(state, selection)
@@ -143,19 +171,25 @@ def prepare(ad, site, state):
         if output_settings:
             extra += output_settings
             ad['TransferOutput'] = ','.join(Path(p).name for p in outputs.split(',') if p)
-        requirement = str(ad.lookup('Requirements')) if 'Requirements' in ad else 'True'
+        requirement = remote_settings.expression(ad, 'REMOTE_Requirements') if 'REMOTE_Requirements' in ad else str(ad.lookup('Requirements')) if 'Requirements' in ad else 'True'
         if site.get('requirements'):
             requirement = '(' + requirement + ') && (' + site['requirements'] + ')'
         extra += 'requirements = ' + requirement + '\n'
-        rank = site.get('rank')
+        rank = remote_settings.expression(ad, 'REMOTE_Rank') if 'REMOTE_Rank' in ad else site.get('rank')
         if rank is None and 'Rank' in ad:
             rank = str(ad.lookup('Rank'))
         if rank is not None:
             extra += 'rank = ' + rank + '\n'
-        native_extra = ad.get('BatchExtraSubmitArgs')
+        for field, keyword in [('RequestCpus', 'request_cpus'), ('RequestMemory', 'request_memory'), ('RequestGPUs', 'request_gpus')]:
+            if field in ad:
+                extra += keyword + ' = ' + remote_settings.expression(ad, field) + '\n'
+        extra += remote_settings.condor_lines(ad)
         if isinstance(native_extra, str) and native_extra.strip():
             extra += native_extra.rstrip() + '\n'
         ad['ClusterlinkRemoteSubmitArgs'] = extra
+        # Otherwise GridManager would replace the route's generated cache/staging lines.
+        if 'REMOTE_BatchExtraSubmitArgs' in ad:
+            del ad['REMOTE_BatchExtraSubmitArgs']
     return ad
 
 
@@ -187,7 +221,7 @@ def main():
         sites = json.loads((state / 'sites.json').read_text())
         # GridResource is supplied by the native router, not selected here.
         site_name = route['GridResource'].split()[2]
-        ad = prepare(ad, sites[site_name], state)
+        ad = prepare(ad, sites[site_name], state, site_name)
         # The native hook reader inserts one ClassAd assignment per line.
         # printOld() emits literal newlines inside string values; ExprTree's
         # string representation escapes them for this line-oriented protocol.

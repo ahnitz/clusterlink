@@ -30,6 +30,44 @@ def remote_output_settings(outputs):
     return 'transfer_output_files = ' + outputs + '\n'
 
 
+def prepare_cache(site, state, artifact, digest, ident):
+    """Coalesce waiting hooks' cache pins; keep individual durable job leases."""
+    cache_key = hashlib.sha256(json.dumps(site, sort_keys=True).encode()).hexdigest()
+    requests = state / 'cache-requests' / cache_key / digest
+    requests.mkdir(parents=True, exist_ok=True)
+    request = requests / (ident + '.request')
+    ready = requests / (ident + '.ready')
+    request.touch()
+    with (state / ('.upload-' + cache_key + '.lock')).open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if not ready.exists():
+            # The first holder handles hooks already waiting behind it. No
+            # deliberate batching delay; isolated jobs still start immediately.
+            others = [p.stem for p in sorted(requests.glob('*.request'))
+                      if p.stem != ident][:255]
+            pending, releases = leases.pending(state, site)
+            result = remote_call(site, 'check', digest, ident, json.dumps(releases), json.dumps(others))
+            leases.acknowledge(pending)
+            if not result['cached']:
+                enrolled = json.loads((state / 'sites.json').read_text())
+                candidates = list(dict.fromkeys(s['root'] for s in enrolled.values()
+                                               if s['root'] != site['root']))
+                if candidates:
+                    result = remote_call(site, 'reuse', digest, json.dumps(candidates), ident)
+                if not result['cached']:
+                    remote_call(site, 'upload', digest, artifact.stat().st_size, ident, payload=artifact)
+                if others:
+                    result = remote_call(site, 'check', digest, ident, '[]', json.dumps(others))
+                    if not result['cached']:
+                        raise RuntimeError('Uploaded cache artifact disappeared before pinning')
+            # Publish acknowledgments only after the remote pins succeeded.
+            for lease in [ident, *others]:
+                (requests / (lease + '.ready')).touch()
+                (requests / (lease + '.request')).unlink(missing_ok=True)
+        request.unlink(missing_ok=True)
+        ready.unlink()
+
+
 def prepare(ad, site, state):
     # VanillaToGrid removes these for unsandboxed Job Router copies. Our grid
     # copy transfers directly into the source Iwd, so restore them in the route.
@@ -75,23 +113,7 @@ def prepare(ad, site, state):
     # tar auto-detects compressed old bundles and uncompressed new bundles.
     archive = digest + '.tar.gz'
     if site['scheduler'] == 'condor' and ad.get('ClusterlinkNoCache') is not True:
-        cache_key = hashlib.sha256(json.dumps(site, sort_keys=True).encode()).hexdigest()
-        # Serialize check+upload locally so simultaneous jobs do not send the
-        # same large environment over SSH before the first upload completes.
-        with (state / ('.upload-' + cache_key + '.lock')).open('a') as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX)
-            pending, releases = leases.pending(state, site)
-            result = remote_call(site, 'check', digest, ident, json.dumps(releases))
-            leases.acknowledge(pending)
-            if not result['cached']:
-                enrolled = json.loads((state / 'sites.json').read_text())
-                candidates = list(dict.fromkeys(s['root'] for s in enrolled.values()
-                                               if s['root'] != site['root']))
-                if candidates:
-                    result = remote_call(site, 'reuse', digest, json.dumps(candidates), ident)
-            if not result['cached']:
-                remote_call(site, 'upload', digest, artifact.stat().st_size, ident,
-                            payload=artifact)
+        prepare_cache(site, state, artifact, digest, ident)
         ad['ClusterlinkCachedEnv'] = digest
         ad['ClusterlinkLease'] = ident
     else:

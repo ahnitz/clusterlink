@@ -225,12 +225,18 @@ def main():
             print(json.dumps({'released': True}))
             return
         if action == "check":
+            batch = json.loads(sys.argv[6]) if len(sys.argv) > 6 else []
+            if (not isinstance(batch, list) or len(batch) > 255
+                    or any(not isinstance(lease, str) or not re.fullmatch(r'[0-9a-f]{64}', lease) for lease in batch)):
+                raise ValueError('Invalid cache lease batch')
             if len(sys.argv) > 5:
                 release_many(root, json.loads(sys.argv[5]))
             exists = target.exists()
             if exists:
                 verify_cached(root, digest, target)
                 pin(root, digest, sys.argv[4] if len(sys.argv) > 4 else None)
+                for lease in batch:
+                    pin(root, digest, lease)
                 # Use verification-record mtime for LRU. Touching the archive
                 # invalidates signatures in other caches sharing its inode.
                 remember_verified(root, digest, target)

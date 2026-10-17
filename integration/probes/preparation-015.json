@@ -1,0 +1,59 @@
+{
+  "version": "0.1.5",
+  "date": "2026-10-16",
+  "cache_phase_benchmark": [
+    {
+      "jobs": 20,
+      "sequential_seconds": 10.448487574991304,
+      "batched_seconds": 0.5231809669639915,
+      "method": "Warm remote cache; sequential old cache checks versus 20 queued concurrent new preparations; Python interpreter startup excluded."
+    },
+    {
+      "final_cache": {
+        "cache_used_bytes": 1651091780,
+        "total_bytes": 1651305588,
+        "active_leases": 0,
+        "cache_bytes": 2000000000,
+        "storage_bytes": 5000000000,
+        "reserve_bytes": 1000000000
+      }
+    }
+  ],
+  "bounded_native_burst": {
+    "route_counts": [
+      {
+        "route": "site_64756d6d7930",
+        "routed": 20
+      },
+      {
+        "route": "site_64756d6d7931",
+        "routed": 20
+      },
+      {
+        "route": "site_64756d6d7932",
+        "routed": 20
+      },
+      {
+        "route": "site_64756d6d7933",
+        "routed": 20
+      }
+    ],
+    "submitted": 950,
+    "routes": 4,
+    "idle_per_route": 20,
+    "max_hooks": 10,
+    "max_fd": 43,
+    "max_fd_count": 31,
+    "master_alive": true,
+    "procd_log_present": true
+  },
+  "burst_method": "950 local source jobs, four dummy routes with unlimited total/20 idle each, sleeping translation hooks that cannot submit remotely. Sampled for 20 seconds. Hook launches are asynchronous; observed ten simultaneous hooks, not eighty. All test jobs removed and manager/ProcD stopped afterward.",
+  "limitations": [
+    "Not an end-to-end throughput benchmark.",
+    "No unlimited-burst FD exhaustion was deliberately reproduced.",
+    "The vanished-PID diagnostic was observed without a master assertion; the reported race cause is unconfirmed.",
+    "Finite per-site idle limits do not guarantee a global descriptor bound for arbitrary numbers of sites or explicitly raised limits."
+  ],
+  "tests": 66,
+  "wheel": "personal_clusterlink-0.1.5-py3-none-any.whl"
+}

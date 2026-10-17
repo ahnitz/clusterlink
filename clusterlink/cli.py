@@ -62,7 +62,7 @@ def enroll(args, state):
         site['python'] = previous['python']
         site['python_bootstrap'] = previous.get('python_bootstrap')
     maximum = args.max_jobs if args.max_jobs is not None else previous.get('max_jobs', -1)
-    idle = args.max_idle if args.max_idle is not None else previous.get('max_idle', -1)
+    idle = args.max_idle if args.max_idle is not None else previous.get('max_idle', min(20, maximum) if maximum != -1 else 20)
     validate_queue_limits(maximum, idle)
     failures = []
     for mode in (["login", "exec"] if args.transport == "auto" else [args.transport]):
@@ -151,7 +151,7 @@ def main():
     p.add_argument("--cache-gb", type=float, required=True)
     p.add_argument("--storage-gb", type=float, required=True)
     p.add_argument("--reserve-gb", type=float, default=1)
-    p.add_argument("--max-idle", type=queue_limit, help="Idle-job limit or unlimited (default: unlimited; preserves existing limit with --update)")
+    p.add_argument("--max-idle", type=queue_limit, help="Idle-job limit or unlimited (default: 20; preserves existing limit with --update)")
     p.add_argument("--max-jobs", type=queue_limit, help="Total routed-job limit or unlimited (default: unlimited; preserves existing limit with --update)")
     p = sub.add_parser("site", help="Control routing without reinstalling remote helpers")
     p.add_argument("action", choices=["enable", "disable", "limits"])

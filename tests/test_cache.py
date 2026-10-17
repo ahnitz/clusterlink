@@ -158,6 +158,13 @@ class CacheTests(unittest.TestCase):
         self.assertEqual((self.root/'cache'/(digest+'.tar.gz')).read_bytes(), data)
         self.assertEqual(len(list((self.root/'cache').iterdir())), 1)
 
+    def test_batch_check_pins_all_jobs_before_acknowledging(self):
+        digest, _ = self.upload(b'12345678')
+        others=['b'*64,'c'*64]
+        self.assertTrue(self.call('check',digest,self.lease,'[]',json.dumps(others))['cached'])
+        self.assertEqual({p.name for p in (self.root/'leases'/digest).iterdir()}, {self.lease,*others})
+        self.call('check',digest,self.lease,'[]',json.dumps(['../invalid']),success=False)
+
 
 if __name__ == '__main__':
     unittest.main()

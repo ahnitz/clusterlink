@@ -1,5 +1,40 @@
 # Clusterlink acceptance status
 
+## Preparation batching and native process tracking (0.1.5)
+
+Concurrent preparation hooks for the same site/image now coalesce cache checks
+and lease pins. A leader processes up to 256 waiting leases in one remote check;
+followers consume local acknowledgments. There is no batching sleep or new
+service. Failed checks publish no acknowledgments; upload/reuse paths pin the
+whole group before acknowledgment. Existing per-job leases and deferred releases
+remain in use. Isolated single-job checks still require an SSH call.
+
+A dev1 warm-cache sample of 20 jobs took 10.45 s for the previous sequential
+checks and 0.52 s for a queued batch. This measures the cache phase, excluding
+Python startup and native scheduler work, not end-to-end throughput. Test leases
+were released and the cache returned to zero active leases.
+
+New enrollments retain unlimited total jobs but default to 20 idle jobs per
+route. Existing explicit limits remain unchanged. The idle buffer includes
+pending routing work and limits jobs assigned ahead of actual execution; it
+does not cap running jobs at 20. Large aggregate idle limits remain unsafe
+without further descriptor/concurrency validation. No unverified
+`JOB_ROUTER_MAX_JOBS_PER_CYCLE` setting is emitted.
+
+Private pools now use native user-owned ProcD at a project-local address. A fresh
+master start is needed to apply this reliably to an existing installation;
+reconfigure alone is not treated as validation. The reported master assertion's
+exact cause has not been reproduced. A vanished-PID diagnostic alone is not
+proof of that assertion. Process scanning is not disabled or slowed to an hour.
+
+Validation: all 66 tests pass and the 0.1.5 wheel builds. The isolated 950-job
+burst assigned 20 jobs to each of four routes, leaving 870 local. Over the
+20-second sample, ten sleeping hooks were simultaneously observed and the
+router's highest FD was 43. No remote jobs were submitted by that test; its jobs
+were removed and all daemons, including ProcD, stopped cleanly. This validates
+the bounded configuration, not the reported unrestricted failure or an arbitrary
+number of sites. [Evidence](integration/probes/preparation-015.json).
+
 ## Worker startup optimization (0.1.4)
 
 Workers first let the bundled Apptainer runtime mount the SIF. A failed setup

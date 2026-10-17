@@ -31,13 +31,18 @@ Replace the Conda environment name, SSH alias, and budgets with your own.
 `--env` also accepts an explicit environment path. Names resolve through your
 Conda installation and are recorded as absolute paths. Budgets are
 in decimal GB. Use another `enroll` command for each additional cluster.
-New enrollments have no Clusterlink total/idle job cap; remote scheduler policy
-still applies. To bound a site, pass `--max-jobs 5000 --max-idle 500` to `enroll`.
-Existing enrollments retain their limits. To remove both limits on one:
+New enrollments have no total routed-job cap and a buffer of 20 idle jobs per
+site. Running jobs do not consume that idle buffer. Enrollment accepts explicit
+limits, for example `--max-jobs 5000 --max-idle 20`. Existing enrollments retain
+their settings; to apply the bounded idle buffer to one:
 
 ```bash
-clusterlink site limits su --max-jobs unlimited --max-idle unlimited
+clusterlink site limits su --max-jobs unlimited --max-idle 20
 ```
+
+Large or unlimited idle limits can flood translation hooks and strand jobs at
+busy sites. Aggregate idle buffers grow with the number of enrolled sites;
+large-site-count and thousands-job throughput have not been validated.
 
 These are queue limits, not CPU counts. Clusterlink does not infer cluster capacity
 from the SSH login node.
@@ -119,7 +124,9 @@ condor_rm JOB_ID                   # Cancel a job inside the activated project s
 Status works offline by default. `--remote` also delivers pending cache-lease
 releases. `--json` provides structured output. A running master is not a complete
 scheduler-health check, and environment presence is not a package-integrity check.
-Logs live in `.clusterlink/log`. Use `clusterlink --help` for other controls.
+Concurrent hooks for the same site and image share cache-check SSH calls while
+retaining individual job leases. A project-local, user-owned Condor ProcD tracks
+process families. Logs live in `.clusterlink/log`. Use `clusterlink --help` for other controls.
 `clusterlink pool stop` stops the project manager; it does not cancel remote jobs.
 
 ## Current limits

@@ -84,9 +84,9 @@ same number of second-long jobs can be dominated by preparation and transfer.
 No 20–30k-job capacity or throughput claim has been validated.
 
 Since 0.1.3, activation fingerprints the environment and verifies the bundle;
-hooks read a small immutable-image manifest and check file identity. Per-site
-upload locks still serialize cache checks/uploads, and every job checks/pins the
-remote cache through SSH. Persistent native helpers handle scheduler communication.
+hooks read a small immutable-image manifest and check file identity. Per-site upload locks serialize cache checks/uploads. Since 0.1.5, waiting hooks
+for one site/image share a remote cache check and batch their individual leases.
+Single isolated preparations still require SSH. Persistent native helpers handle scheduler communication.
 Input/output transfers and scheduler limits can also dominate. Route limits bound
 pressure on the user's submission host and storage.
 

@@ -1,3 +1,9 @@
+# Automated tests
+
+See [ci/README.md](ci/README.md) for the required installed-wheel, native Condor,
+and SSH/SIF checks. The acceptance plan below covers additional real-site and
+scientific validation.
+
 # First cluster experiment
 
 ## Information to obtain

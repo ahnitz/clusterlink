@@ -10,8 +10,10 @@ from clusterlink import gahp
 
 class GahpStorageTests(unittest.TestCase):
     def test_native_status_cache_uses_enrolled_storage(self):
-        script = Path('/usr/libexec/blahp/condor_status.sh')
-        if not script.exists():
+        script = next((root / 'condor_status.sh' for root in map(Path,
+                      ['/usr/libexec/blahp', '/usr/lib/condor', '/usr/libexec/condor'])
+                      if (root / 'condor_status.sh').exists()), None)
+        if script is None:
             self.skipTest('Native HTCondor shell helpers unavailable')
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

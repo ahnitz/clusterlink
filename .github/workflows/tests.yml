@@ -1,0 +1,110 @@
+name: tests
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '19 5 * * 1'
+permissions:
+  contents: read
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python: '3.11'
+            condor: '25.0'
+          - python: '3.12'
+            condor: '25.x'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install native HTCondor
+        run: bash ci/install-condor.sh '${{ matrix.condor }}'
+      - name: Build and install wheel in an isolated environment
+        run: |
+          python -m pip install build
+          python -m build
+          python -m venv "$RUNNER_TEMP/test-venv"
+          "$RUNNER_TEMP/test-venv/bin/pip" install dist/*.whl coverage
+          echo "$RUNNER_TEMP/test-venv/bin" >> "$GITHUB_PATH"
+      - name: Run installed-package regressions (no skipped tests)
+        run: |
+          mkdir -p "$RUNNER_TEMP/regression"
+          cd "$RUNNER_TEMP/regression"
+          python -c 'import clusterlink; print(clusterlink.__file__)'
+          clusterlink --help
+          python -m coverage run --source=clusterlink "$GITHUB_WORKSPACE/ci/unit.py" "$GITHUB_WORKSPACE/tests"
+          python -m coverage xml -o "$GITHUB_WORKSPACE/coverage.xml"
+          python -m coverage report
+      - name: Native private pools, transfers, restart, mixed sites, and helper admission
+        run: python ci/native.py "$RUNNER_TEMP/native-results"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-${{ matrix.python }}-${{ matrix.condor }}
+          path: |
+            coverage.xml
+            ${{ runner.temp }}/native-results/**/log/*
+            ${{ runner.temp }}/native-results/**/*.json
+            ${{ runner.temp }}/native-results/**/*.log
+            ${{ runner.temp }}/native-results/**/*.err
+          retention-days: 7
+  ssh-sif:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+          activate-environment: clusterlink-ci
+          python-version: '3.11'
+          channels: conda-forge
+          conda-remove-defaults: true
+      - name: Install native HTCondor
+        run: bash ci/install-condor.sh 25.0
+      - name: Install the built package and create isolated destination pools
+        shell: bash -el {0}
+        run: |
+          python -m pip install build
+          python -m build
+          python -m pip install dist/*.whl
+          bash ci/ssh-setup.sh dist/*.whl
+      - name: Enroll, activate, run real SIF jobs and check returned data and cache leases
+        shell: bash -el {0}
+        run: python ci/ssh.py "$RUNNER_TEMP/ssh-results" --env "$CONDA_PREFIX"
+      - name: Collect destination diagnostics and stop test managers
+        if: always()
+        shell: bash -el {0}
+        run: |
+          mkdir -p "$RUNNER_TEMP/remote-logs"
+          for site in cia cib; do
+            if id "$site" >/dev/null 2>&1; then
+              sudo -u "$site" env CONDOR_CONFIG="/home/$site/pool/condor.config" condor_off -master || true
+              sudo find "/home/$site" -type f \( -name '*Log*' -o -name '*.log' \) -exec cp --parents '{}' "$RUNNER_TEMP/remote-logs" \;
+            fi
+          done
+          sudo chown -R "$(id -u):$(id -g)" "$RUNNER_TEMP/remote-logs"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ssh-sif
+          include-hidden-files: true
+          path: |
+            ${{ runner.temp }}/ssh-results/results.json
+            ${{ runner.temp }}/ssh-results/**/job.log
+            ${{ runner.temp }}/ssh-results/**/job.err
+            ${{ runner.temp }}/ssh-results/**/result.json
+            ${{ runner.temp }}/ssh-results/.clusterlink/log/*
+            ${{ runner.temp }}/ssh-results/.clusterlink/install-apptainer.log
+            ${{ runner.temp }}/remote-logs/
+          retention-days: 7

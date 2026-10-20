@@ -204,5 +204,5 @@ project details, enroll clusters, and verify jobs. [AGENTS.md](AGENTS.md) points
 agents to it; compatible skill loaders can select it automatically or invoke it
 as `$clusterlink-project`.
 
-[Validation evidence](STATUS.md) · [Test plan](TESTING.md) ·
+[Automated tests](ci/README.md) · [Validation evidence](STATUS.md) · [Test plan](TESTING.md) ·
 [HTCondor Job Router](https://htcondor.readthedocs.io/en/main/grid-computing/job-router.html)

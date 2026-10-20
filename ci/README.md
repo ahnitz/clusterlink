@@ -1,5 +1,8 @@
 # Automated validation
 
+[Validated run](https://github.com/ahnitz/clusterlink/actions/runs/39496107476):
+both native matrix jobs and SSH/SIF acceptance passed.
+
 GitHub Actions runs `.github/workflows/tests.yml` on pushes, pull requests,
 manual dispatch, and weekly. No cluster credentials or repository secrets are
 needed. Workflow token permissions are read-only. All jobs have deadlines and

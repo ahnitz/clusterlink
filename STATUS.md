@@ -1,5 +1,34 @@
 # Clusterlink acceptance status
 
+## Automated CI integration
+
+The repository now runs installed-wheel regression tests and real HTCondor
+integration on pushes, pull requests, manual dispatch, and a weekly schedule.
+Ubuntu runners cover Python 3.11 with HTCondor 25.0 and Python 3.12 with 25.x.
+All three jobs passed in [run 39496107476](https://github.com/ahnitz/clusterlink/actions/runs/39496107476).
+The 81 regressions run outside the checkout; skipped native checks fail the job.
+Coverage XML and bounded native logs are retained as artifacts.
+
+The native harness exercises private queue isolation, mixed-site admission,
+input/output contents, nonzero exits, restart persistence, removal, local helper
+limits, and a real two-node DAGMan chain. Feature-channel tests reserve capacity
+for the DAG manager as well as its children. All local probe managers were stopped.
+
+The separate SSH/SIF job provisions two isolated destination accounts and pools,
+enrolls through the CLI, activates a real Conda environment, and builds a real SIF.
+The successful run verified targeted jobs on both destinations, automatic routing,
+input/output checksums, inaccessible submit-side files, per-site requirements and
+environments, the image's Python prefix, and nonzero payload exit propagation.
+A separate long-running job was cancelled before its natural completion; terminal
+remote accounting records are allowed, but active jobs must drain. Cache usage
+stayed within budgets, each destination retained one image artifact, and all cache
+leases drained. Failure artifacts include queue and scheduler diagnostics; no
+cluster credentials or scientific data were required.
+
+These are bounded infrastructure tests, not full PyCBC/Pegasus planning, Slurm
+acceptance, or a 20–30k-job capacity claim. See [ci/README.md](ci/README.md) for
+commands, fixture provisioning, artifact policy, and remaining coverage gaps.
+
 ## Mixed Pegasus sites and local helper admission (0.1.8)
 
 One eligibility predicate now governs routing, private-startd admission, and

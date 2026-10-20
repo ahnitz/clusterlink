@@ -170,6 +170,10 @@ queue
             for state in states:
                 print('Failure diagnostics:', state, flush=True)
                 try:
+                    detail = command(state, 'condor_q', '-better-analyze', '-all', check=False).stdout
+                    detail += command(state, 'condor_status', '-af', 'Name', 'State', 'Activity', 'Cpus', 'Memory', 'Disk', check=False).stdout
+                    escaped = detail[-3500:].replace('%', '%25').replace('\n', '%0A').replace('\r', '%0D')
+                    print('::error title=Pool matching diagnostics::' + escaped, flush=True)
                     print(command(state, 'condor_q', '-af', 'ClusterId', 'ProcId',
                                   'JobStatus', 'HoldReason', 'Cmd', check=False).stdout, flush=True)
                     for filename in ('SchedLog', 'NegotiatorLog'):

@@ -11,6 +11,6 @@ with subprocess.Popen(sys.argv[1:], stdout=subprocess.PIPE, stderr=subprocess.ST
         lines.append(line)
     code = process.wait()
 if code:
-    details = ''.join(lines)[-16000:].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+    details = ''.join(lines)[-3500:].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
     print('::error title=Integration command failed::' + details, flush=True)
 sys.exit(code)

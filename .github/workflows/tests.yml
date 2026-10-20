@@ -7,11 +7,11 @@ on:
     - cron: '19 5 * * 1'
 permissions:
   contents: read
-concurrency:
-  group: tests-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 jobs:
   native:
+    concurrency:
+      group: native-${{ github.ref }}-${{ matrix.python }}-${{ matrix.condor }}
+      cancel-in-progress: true
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
@@ -23,8 +23,8 @@ jobs:
           - python: '3.12'
             condor: '25.x'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
       - name: Install native HTCondor
@@ -47,7 +47,7 @@ jobs:
           python -m coverage report
       - name: Native private pools, transfers, restart, mixed sites, and helper admission
         run: python ci/run.py python ci/native.py "$RUNNER_TEMP/native-results"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: always()
         with:
           name: native-${{ matrix.python }}-${{ matrix.condor }}
@@ -59,10 +59,13 @@ jobs:
             ${{ runner.temp }}/native-results/**/*.err
           retention-days: 7
   ssh-sif:
+    concurrency:
+      group: ssh-sif-${{ github.ref }}
+      cancel-in-progress: false
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: conda-incubator/setup-miniconda@v3
         with:
           miniforge-version: latest
@@ -94,7 +97,7 @@ jobs:
             fi
           done
           sudo chown -R "$(id -u):$(id -g)" "$RUNNER_TEMP/remote-logs"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: always()
         with:
           name: ssh-sif

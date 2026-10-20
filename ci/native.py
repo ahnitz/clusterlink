@@ -89,7 +89,8 @@ def completed(state, job, expected=0):
 
 def main(root):
     root.mkdir(parents=True, exist_ok=False)
-    states = [create(root, 'first'), create(root, 'second'), create(root, 'no-workers', 0)]
+    # Feature-channel DAGMan can reserve a CPU; leave one for its child jobs.
+    states = [create(root, 'first', 2), create(root, 'second'), create(root, 'no-workers', 0)]
     evidence = {}
     try:
         for state in states:

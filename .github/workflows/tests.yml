@@ -104,6 +104,7 @@ jobs:
           include-hidden-files: true
           path: |
             ${{ runner.temp }}/ssh-results/results.json
+            ${{ runner.temp }}/ssh-results/remote-after-cancel.json
             ${{ runner.temp }}/ssh-results/**/job.log
             ${{ runner.temp }}/ssh-results/**/job.err
             ${{ runner.temp }}/ssh-results/**/result.json

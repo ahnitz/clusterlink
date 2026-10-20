@@ -83,17 +83,28 @@ log = job.log
         evidence.append({'job': job, 'result': data, 'exit_code': ad['ExitCode']})
     # Cancel a running remote job and verify both destination queues drain.
     sleeper = root / 'sleeper.py'
-    sleeper.write_text('import time; time.sleep(300)\n')
-    submitted = json.loads(cli(root, 'submit', '--site', 'cia', str(sleeper)).stdout)
+    sleeper.write_text('import time; time.sleep(1800)\n')
+    submitted = json.loads(cli(root, 'submit', '--site', 'cia', '--runtime', '1800', str(sleeper)).stdout)
     cancel_id = submitted['condor_id'].split()[0]
     wait_until(lambda: any(f"{ad['ClusterId']}.{ad['ProcId']}" == cancel_id and
                           ad['JobStatus'] == 2 for ad in ads(state)), seconds=300)
     command(state, 'condor_rm', cancel_id)
+    remote_ads = {}
     def empty_destinations():
-        return all(not subprocess.check_output(['ssh', site, 'condor_q', '-autoformat', 'ClusterId'],
-                                               text=True, timeout=30).strip()
-                   for site in ('cia', 'cib'))
-    wait_until(empty_destinations, seconds=180)
+        for site in ('cia', 'cib'):
+            raw = subprocess.check_output(['ssh', site, 'condor_q', '-json'], text=True, timeout=30)
+            remote_ads[site] = json.loads(raw or '[]')
+        # Native batch submission may retain terminal ads for status queries.
+        # Cancellation must end execution, not erase those accounting records.
+        return not any(ad['JobStatus'] not in (3, 4)
+                       for rows in remote_ads.values() for ad in rows)
+    try:
+        wait_until(empty_destinations, seconds=600)
+    finally:
+        (root / 'remote-after-cancel.json').write_text(json.dumps(remote_ads, indent=2))
+        compact = {site: [{key: ad.get(key) for key in ('ClusterId', 'ProcId', 'JobStatus',
+                   'HoldReason', 'ExitCode')} for ad in rows] for site, rows in remote_ads.items()}
+        print('Remote cancellation state:', json.dumps(compact), flush=True)
     # Cache uploads must converge to one artifact per destination, and all leases drain.
     def drained():
         status = json.loads(cli(root, 'status', '--remote', '--json').stdout)

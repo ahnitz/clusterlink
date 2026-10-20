@@ -14,12 +14,13 @@ come from the installed package. Missing native tests are failures, not silent
 skips. Coverage reports expose untested paths without a misleading arbitrary
 coverage percentage gate.
 
-`native.py` starts two independent one-slot private pools and a no-worker access
+`native.py` starts independent two-slot and one-slot private pools and a no-worker access
 point. It verifies native submit rejection, mixed Pegasus-site admission,
 CondorIO contents, a nonzero exit status, private queue isolation, manager restart
 with queued work, removal, serialized local helpers, and a real DAGMan chain
 transferring an intermediate output. It does not claim that DAGMan alone tests
-the Pegasus planner.
+the Pegasus planner. The DAG pool leaves capacity for DAGMan's own resource
+reservation on feature-channel releases as well as its child job.
 
 Run locally using the installed package's Python:
 
@@ -42,7 +43,7 @@ Jobs execute through SSH/BLAHP/GridManager and native Condor transfer.
 Checks include both explicit destinations and automatic routing, site-specific
 remote requirements/environment, inaccessible submit-only files, returned input
 checksums, fixed image Python prefix, nonzero payload exit, cancellation, remote
-queue draining, bounded cache usage, one cached image per destination, and lease
+active-job draining (terminal accounting ads may remain), bounded cache usage, one cached image per destination, and lease
 cleanup. No mocks or existing cluster installations stand in for this path.
 
 `install-condor.sh` and `ssh-setup.sh` are **disposable-machine provisioning only**:

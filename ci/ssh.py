@@ -13,8 +13,11 @@ from native import command, wait_until, ads
 
 
 def cli(root, *args):
-    return subprocess.run(['clusterlink', *args], cwd=root, check=True,
-                          text=True, capture_output=True, timeout=600)
+    result = subprocess.run(['clusterlink', *args], cwd=root,
+                            text=True, capture_output=True, timeout=600)
+    if result.returncode:
+        raise RuntimeError(f'clusterlink {args}: {result.stdout}\n{result.stderr}')
+    return result
 
 
 def finish(state, job, expected=0):

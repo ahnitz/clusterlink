@@ -46,7 +46,7 @@ jobs:
           python -m coverage xml -o "$GITHUB_WORKSPACE/coverage.xml"
           python -m coverage report
       - name: Native private pools, transfers, restart, mixed sites, and helper admission
-        run: python ci/native.py "$RUNNER_TEMP/native-results"
+        run: python ci/run.py python ci/native.py "$RUNNER_TEMP/native-results"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -81,7 +81,7 @@ jobs:
           bash ci/ssh-setup.sh dist/*.whl
       - name: Enroll, activate, run real SIF jobs and check returned data and cache leases
         shell: bash -el {0}
-        run: python ci/ssh.py "$RUNNER_TEMP/ssh-results" --env "$CONDA_PREFIX"
+        run: python ci/run.py python ci/ssh.py "$RUNNER_TEMP/ssh-results" --env "$CONDA_PREFIX"
       - name: Collect destination diagnostics and stop test managers
         if: always()
         shell: bash -el {0}

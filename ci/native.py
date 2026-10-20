@@ -7,6 +7,8 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
+import inspect
 import time
 
 from clusterlink import pool
@@ -67,7 +69,7 @@ def wait_until(predicate, seconds=120):
         if result:
             return result
         time.sleep(1)
-    raise AssertionError('Timed out waiting for native HTCondor state')
+    raise AssertionError('Timed out waiting for native HTCondor state: ' + inspect.getsource(predicate).strip())
 
 
 def ads(state, history=False):
@@ -164,6 +166,18 @@ queue
         (root / 'results.json').write_text(json.dumps(evidence, indent=2) + '\n')
         print(json.dumps(evidence, indent=2), flush=True)
     finally:
+        if sys.exc_info()[0] is not None:
+            for state in states:
+                print('Failure diagnostics:', state, flush=True)
+                try:
+                    print(command(state, 'condor_q', '-af', 'ClusterId', 'ProcId',
+                                  'JobStatus', 'HoldReason', 'Cmd', check=False).stdout, flush=True)
+                    for filename in ('SchedLog', 'NegotiatorLog'):
+                        path = state / 'log' / filename
+                        if path.exists():
+                            print(filename, '\n'.join(path.read_text(errors='replace').splitlines()[-12:]), flush=True)
+                except (OSError, subprocess.TimeoutExpired) as error:
+                    print(error, flush=True)
         for state in states:
             for name, args in [('queue.json', ('condor_q', '-json')),
                                ('history.json', ('condor_history', '-json'))]:
